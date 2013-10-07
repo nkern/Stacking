@@ -13,24 +13,20 @@
 print '...importing modules'
 import numpy as np
 import pyfits
-from numpy.random import randint,uniform
 from numpy.linalg import norm
 import matplotlib.pyplot as mp
-import cosmolopy.distance as cd
 import astStats
-import scipy.ndimage as ndi
-from scipy.interpolate import interp1d
-import random
 import sys
 
 from caustic_class_stack2D import *
 from caustic_universal_stack2D import *
+from CausticMass import *
 
 ## FLAGS ##
 self_stack	= True			# Run self-stack or bin-stack
 scale_data	= False			# Scale data by r200 and vdisp if True
 use_flux	= True			# Using Flux if True, using Sophie if False
-write_data 	= True			# Write Data to Result directories if True
+write_data 	= False			# Write Data to Result directories if True
 light_cone	= False			# Input RA|DEC projection data if True, if False inputting x,y,z 3D data
 one_ens		= True			# Only solve for one ensemble cluster if true 
 					# This is generally the case when using an HPC
@@ -60,40 +56,41 @@ else:
 if self_stack == True:							# Change Write Directory Depending on Parameters
 	write_loc = 'ss_m'+str(method_num)+'_run'+str(sys.argv[4])	# Self Stack data-write location
 else:
-	write_loc = 'bs_m'+str(method_num)+'_run'+str(sys.argv[4]) # Bin Stack data-write location
+	write_loc = 'bs_m'+str(method_num)+'_run'+str(sys.argv[4])	# Bin Stack data-write location
 
 # Make dictionary for all variables that remain constant throughout duration of program!
 varib = {'c':c,'h':h,'H0':H0,'q':q,'beta':beta,'fbeta':fbeta,'r_limit':r_limit,'v_limit':v_limit,'data_set':data_set,'halo_num':halo_num,'ens_num':ens_num,'gal_num':gal_num,'line_num':line_num,'method_num':method_num,'write_loc':write_loc,'root':root,'self_stack':self_stack,'scale_data':scale_data,'use_flux':use_flux,'write_data':write_data,'light_cone':light_cone,'one_ens':one_ens}
 
 ## INITIALIZATION ##
 U = universal(varib)
-BS = binstack(varib)
 SS = selfstack(varib)
-C  = caustic(varib)
-
+C = Caustic()
 ###################
 ##### PROGRAM #####
 ###################
 U.print_separation('Running caustic_mass_stack2D.py')
+U.print_varibs(varib)
 
+## Load Halo Data
 U.print_separation('...Loading Halos',type=2)
-# Load Halo Data
 HaloID,HaloData = U.load_halos()
 # Sort Halos by A Priori Known Descending Mass (Mass Critical 200)
 HaloID,HaloData = U.sort_halos(HaloID,HaloData)
+# Unpack HaloData array into local namespace
+M_crit200,R_crit200,Z,SRAD,ESRAD,HVD,HPX,HPY,HPZ,HVX,HVY,HVZ = HaloData
 
-# Load Galaxy Data
+## Load Galaxy Data
 U.print_separation('...Loading Galaxies',type=2)
 Halo_P,Halo_V,Gal_P,Gal_V,Gal_Mags,HaloData = U.configure_galaxies(HaloID,HaloData)
 
-# Solve for Ensemble number: ens_num 
+## Solve for Ensemble number: ens_num 
+U.print_separation('...Starting Ensemble Loop',type=2)
 j = 0
 for k in np.array([ens_num]):
 
 	# Build Ensemble
 	if self_stack:
 		SS.self_stack_clusters(HaloID,HaloData,Halo_P,Halo_V,Gal_P,Gal_V,Gal_Mags,k)
-		pass
 	else:
 		BS.bin_stack_clusters()
 

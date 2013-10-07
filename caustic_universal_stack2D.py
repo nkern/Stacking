@@ -14,6 +14,7 @@ import random
 from scipy import weave
 from scipy.weave import converters
 import cosmolopy.distance as cd
+import time
 
 ## Program ##
 
@@ -91,7 +92,7 @@ class universal(object):
 		Halo_P,Halo_V = np.array(Halo_P),np.array(Halo_V)
 		Gal_Mags = np.array(Gal_Mags)		
 
-		return Halo_P,Halo_V,Gal_P,Gal_V,Gal_Mags,HaloData[0:5]
+		return Halo_P,Halo_V,Gal_P,Gal_V,Gal_Mags,HaloData[0:6]
 
 	def load_galaxies(self,haloid,halodata):
 		''' Loads haloid galaxies from a local directory '''
@@ -172,95 +173,31 @@ class universal(object):
 
 		return r, v
 
-	def limit_gals(self,r,v,mags,r200):
+	def limit_gals(self,r,v,mags,r200,hvd):
 		''' Sort data by magnitude, and elimite values outside phase space limits '''
 		# Sort by ascending magnitude (bright to dim)
 		sorts = np.argsort(mags)
 		r,v,mags = r[sorts],v[sorts],mags[sorts]
 		# Limit Phase Space
-		sample = np.where( (r < r200*self.r_limit) & (v > -v_limit) & (v < v_limit) )[0] 
+		sample = np.where( (r < r200*self.r_limit) & (v > -self.v_limit) & (v < self.v_limit) )[0] 
 		r,v,mags = r[sample],v[sample],mags[sample]
 	
 		return r,v,mags
 
-
-	def shiftgapper(self,data):
-		''' Cluster interloper treatment using shift gapper technique '''
-		npbin = 25
-		gap_prev = 2000 #initialize gap size for initial comparison (must be larger to start).
-		nbins = np.int(np.ceil(data[:,0].size/(npbin*1.0)))
-		origsize = data[:,0].shape[0]
-		data = data[np.argsort(data[:,0])] #sort by r to ready for binning
-		#print 'NBINS FOR GAPPER = ', nbins
-		for i in range(nbins):
-			#print 'BEGINNING BIN:',str(i)
-			databin = data[npbin*i:npbin*(i+1)]
-			datanew = None
-			nsize = databin[:,0].size
-			datasize = nsize-1
-			if nsize > 5:
-				while nsize - datasize > 0 and datasize >= 5:
-					#print '    ITERATING'
-					nsize = databin[:,0].size
-					databinsort = databin[np.argsort(databin[:,1])] #sort by v
-					f = (databinsort[:,1])[databinsort[:,1].size-np.int(np.ceil(databinsort[:,1].size/4.0))]-(databinsort[:,1])[np.int(np.ceil(databinsort[:,1].size/4.0))]
-					gap = f/(1.349)
-					#print '    GAP SIZE', str(gap)
-					if gap < 500.0:
-						gap = 500.0
-					if gap >= 2.0*gap_prev: 
-						gap = gap_prev
-						#print '   Altered gap = %.3f'%(gap)
-					databelow = databinsort[databinsort[:,1]<=0]
-					gapbelow =databelow[:,1][1:]-databelow[:,1][:-1]
-					dataabove = databinsort[databinsort[:,1]>0]
-					gapabove = dataabove[:,1][1:]-dataabove[:,1][:-1]
-					try:
-						if np.max(gapbelow) >= gap: vgapbelow = np.where(gapbelow >= gap)[0][-1]
-						else: vgapbelow = -1
-						#print 'MAX BELOW GAP',np.max(gapbelow)
-						try: 
-							datanew = np.append(datanew,databelow[vgapbelow+1:],axis=0)
-						except:
-							datanew = databelow[vgapbelow+1:]
-					except ValueError:
-						pass
-					try:
-						if np.max(gapabove) >= gap: vgapabove = np.where(gapabove >= gap)[0][0]
-						else: vgapabove = 99999999
-						#print 'MAX ABOVE GAP',np.max(gapabove)
-						try: 
-							datanew = np.append(datanew,dataabove[:vgapabove+1],axis=0)
-						except:
-							datanew = dataabove[:vgapabove+1]
-					except ValueError:
-						pass
-					databin = datanew
-					datasize = datanew[:,0].size
-					datanew = None
-				#print 'DATA SIZE OUT', databin[:,0].size
-				if gap >=500.0:
-					gap_prev = gap
-				else:
-					gap_prev = 500.0
-				
-			try:
-				datafinal = np.append(datafinal,databin,axis=0)
-			except:
-				datafinal = databin
-			#print 'GALAXIES CUT =',str(origsize-datafinal[:,0].size)
-		return datafinal
-
-	def zdistance(self,clus_z,H0=100.0):
-		"""
-		Finds the angular diameter distance for an array of cluster center redshifts.
-		Instead, use angular distance file precalculated and upload.
-		"""
- 		cosmo = {'omega_M_0':0.3,'omega_lambda_0':0.7,'h':H0/100.0}
-		cosmo = cd.set_omega_k_0(cosmo)
-		ang_d = cd.angular_diameter_distance(clus_z,**cosmo)
-		lum_d = cd.luminosity_distance(clus_z,**cosmo)
-		return ang_d,lum_d
+	def print_varibs(self,varib):
+		print "Start Time		=",time.asctime()
+		print "halo_num		=",varib['halo_num']
+		print "ens_num			=",varib['ens_num']
+		print "gal_num			=",varib['gal_num']
+		print "line_num		=",varib['line_num']
+		print "method_num		=",varib['method_num']
+		print "write_loc		=",varib['write_loc']
+		print "data_set		=",varib['data_set']
+		print "self_stack		=",varib['self_stack']
+		print "write_data		=",varib['write_data']
+		print "scale_data		=",varib['scale_data']
+		print "light_cone		=",varib['light_cone']
+		return	
 
 	def print_separation(self,text,type=1):
 		if type==1:
