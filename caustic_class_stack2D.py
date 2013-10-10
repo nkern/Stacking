@@ -14,13 +14,13 @@ self_stack:
 ## Import Modules ##
 import numpy as np
 from caustic_universal_stack2D import universal
-from CausticMass import Caustic 
+from CausticMass import *
 import numpy.random as npr
 import astStats
 
 ## Program ##
 
-class selfstack(object):
+class selfstack:
 
 	def __init__(self,varib):
 		''' Initial function for class selfstack '''
@@ -29,15 +29,16 @@ class selfstack(object):
 		# Initializing the universal class 
 		self.U = universal(varib)			
 		self.C = Caustic()
+		self.CS = CausticSurface()
 	
 	def build_ensemble(self,r,v,mags,halodata,l):
 		''' 
-		- This function selects specifc galaxies per line of sight using a sepcified method of stacking
+		- This function selects specific galaxies per line of sight using a sepcified method of stacking
 		- The current method of interloper treatment is using CausticMass.py's ShiftGapper technique
 		- Certain Measures were taken when using the ShiftGapper to ensure gal_num galaxies within r200
-		- anterloper treatment is always done for the LOS, and can be done for ensemble_los if desired
+		- Interloper treatment is always done for the LOS, and can be done for ensemble_los if desired
 		'''
-		## Constants and Flags
+		##
 		clean_en_los = False					# This flag toggles extra shiftgapper before ensemble stacking
 		gal_num = self.gal_num	
 	
@@ -54,15 +55,15 @@ class selfstack(object):
 			within = np.where(r<r_crit200)[0]
 			# pick out gal_num 'th index in list, (include extra to counter shiftgapper's possible dimishement of richness)
 			excess = gal_num / 5.0				# galaxy excess to counter shiftgapper
-			end = within[gal_num + excess]		
+			end = within[:gal_num + excess + 1][-1]		# instead of indexing I am slicing b/c of chance of not enough gals existing...	
 			# Build Ensemble (en => ensemble)
 			if clean_en_los == True:
 				excess = gal_num * 2.0 / 5.0		# make excess a bit larger than previously defined
-				end = within[gal_num + excess]
+				end = within[:gal_num + excess + 1][-1]
 				r2,v2,mags2 = self.C.shiftgapper(np.vstack([r[:end],v[:end],mags[:end]]).T).T # Shiftgapper inputs and outputs data as transpose...
 				within = np.where(r2<r_crit200)[0]	# re-calculate within array with new sample
 				excess = gal_num / 5.0
-				end = within[gal_num + excess]
+				end = within[:gal_num + excess + 1][-1]
 				# Append to ensemble array
 				en_r,en_v,en_m = r2[:end],v2[:end],mags2[:end]
 			else:
@@ -70,11 +71,11 @@ class selfstack(object):
 			# Build Line of Sight (ln => line of sight)
 			# shiftgapper on line of sight
 			excess = gal_num * 2.0 / 5.0
-			end = within[gal_num + excess]
+			end = within[:gal_num + excess + 1][-1]
 			r2,v2,mags2 = self.C.shiftgapper(np.vstack([r[:end],v[:end],mags[:end]]).T).T
 			within = np.where(r2<r_crit200)[0]		# re-calculate within array with new sample
 			# Now feed ln arrays correct gal_num richness within r200
-			end = within[gal_num]
+			end = within[:gal_num + 1][-1]
 			ln_r,ln_v,ln_m = r2[:end],v2[:end],mags2[:end]	
 			# Done! Now we have en_r and ln_r arrays, which will either be stacked (former) or put straight into Caustic technique (latter)
 			# Note that the pure los and ensemble los do not necessarily have identical phase space due to shiftgapper treatment
@@ -86,34 +87,36 @@ class selfstack(object):
 			r,v,mags = r[:sample],v[:sample],mags[:sample]
 			samp_size = len(r)				# actual size of sample (might be less than gal_num*25)
 			# create random numbered array for galaxy selection
-			while True:					# see method 0 comments on variables such as 'excess' and 'within' and 'end'
-				excess = gal_num * 2.0 / 5.0
-				end = gal_num * 1.5
-				rando = npr.randint(0,samp_size,end)
-				within = np.where(r[rando]<=r_crit200)[0]
+			excess = gal_num * 2.0 / 5.0
+			samp_num = gal_num + excess			# sample size of randomly generated numbers, start too low on purpose, then raise in loop
+			loop = True					# break condition
+			while loop == True:				# see method 0 comments on variables such as 'excess' and 'within' and 'end'
+				for j in range(3):			# before upping sample size, try to get a good sample a few times
+					rando = npr.randint(0,samp_size,samp_num)
+					within = np.where(r[rando]<=r_crit200)[0]
+					if len(within) >= gal_num + excess:
+						loop = False
 				if len(within) < gal_num + excess:
-					end += 10
-				else:
-					break
+					samp_num += 2
 			### Build Ensemble
 			if clean_en_los == True:
 				r2,v2,mags2 = self.C.shiftgapper(np.vstack([r[rando],v[rando],mags[rando]]).T).T
 				within = np.where(r2<r_crit200)[0]
 				excess = gal_num / 5.0
-				end = within[gal_num + excess]
+				end = within[:gal_num + excess + 1][-1]
 				# Append to ensemble array
 				en_r,en_v,en_m = r2[:end],v2[:end],mags2[:end]
 			else:
 				excess = gal_num / 5.0
-				end = within[gal_num + excess]
+				end = within[:gal_num + excess + 1][-1]
 				en_r,en_v,en_m = r[rando][:end],v[rando][:end],mags[rando][:end]
 
 			### Build LOS
 			excess = gal_num / 5.0
-			end = within[gal_num + excess]
+			end = within[:gal_num + excess + 1][-1]
 			r2,v2,mags2 = self.C.shiftgapper(np.vstack([r[rando][:end],v[rando][:end],mags[rando][:end]]).T).T
 			within = np.where(r2<r_crit200)[0]
-			end = within[gal_num]
+			end = within[:gal_num + 1][-1]
 			ln_r,ln_v,ln_m = r2[:end],v2[:end],mags2[:end]
 			# Done! Now we have en_r and ln_r arrays (ensemble and line of sight arrays)
 
@@ -143,15 +146,57 @@ class selfstack(object):
 		return en_r,en_v,en_m,ln_r,ln_v,ln_m
 
 
-	def kernel_caustic_masscalc(self):
+	def kernel_caustic_masscalc(self,r,v,halodata,derived_hvd,k,l=None):
 		'''
 		- This function runs the basic procedure of the Caustic Technique from CausticMass.py by using:
 		- Caustic.gaussian_kernel()
 		- CausticSurface.main()
 		- MassCalc.main()
 		'''
-		pass
+		## Print Details
+		if l == None:
+			text = '## Working On Cluster #'+str(k)+''
+		else:
+			text = '## Working On Cluster #'+str(k)+'\n## Line of Sight #'+str(l)+''
+		self.U.print_separation(text,type=2)
+
+
+		## Unpack HaloData Array into Namespace
+		m_crit200,r_crit200,z,srad,esrad,hvd = halodata
+
+		## Mirror Phase Space Velocity Data if mirror == True
+		mirror = True
+		if mirror == True:
+			rvalues,vvalues = np.append(r,r),np.append(v,-v)		
+		else:
+			rvalues,vvalues = r,v
+
+		## Perform Kernel Density Estimation
+		# Set Kernel Density Phase Space limits in Mpc and km/s
+		xmax = 6.0			# Mpc
+		ymax = 5000.0			# km/s
+		self.C.gaussian_kernel(rvalues,vvalues,r_crit200,normalization=self.H0,scale=self.q,xmax=xmax,ymax=ymax,xres=200,yres=220)
+		self.C.img_tot = self.C.img/np.max(np.abs(self.C.img))
+ 		self.C.img_grad_tot = self.C.img_grad/np.max(np.abs(self.C.img_grad))
+ 		self.C.img_inf_tot = self.C.img_inf/np.max(np.abs(self.C.img_inf))
 		
+		## Define Beta Profile
+		beta_profile = False		# beta profile as a funct of radius?
+		if beta_profile == True:
+			xbeta,abeta = np.loadtxt(''+str(root)+'/nkern/Caustic/average_betaprofile.tab',dtype='float',usecols=(0,1),unpack=True)
+			fit = np.polyfit((xbeta*r_crit200)[xbeta<4],abeta[xbeta<4],6)
+			self.beta = fit[0]*self.C.x_range**6+fit[1]*self.C.x_range**5+fit[2]*self.C.x_range**4+fit[3]*self.C.x_range**3+fit[4]*self.C.x_range**2+fit[5]*self.C.x_range+fit[6]	
+		else:				# constant beta w/ radius
+			self.beta = np.zeros(self.C.x_range.size) + self.beta
+
+		## Caustic Surface Calculation
+		# This function takes RA, DEC and Z as first input, for now it is empty, all relavent files go to class dictionary
+		self.CS.main(np.zeros(0),self.C.x_range,self.C.y_range,self.C.img_tot,r200=r_crit200,halo_scale_radius=srad,halo_scale_radius_e=esrad,halo_vdisp=derived_hvd,beta=self.beta)
+
+
+
+
+
 
 
 
@@ -199,7 +244,7 @@ class selfstack(object):
 				los_hvd = astStats.biweightScale(np.copy(ln_v)[ln_within],9.0)
 
 			# Running LOS mass estimation
-		#	self.kernel_caustic_masscalc(
+			self.kernel_caustic_masscalc(r,v,HaloData.T[k],los_hvd,k,l)
 			
 
 

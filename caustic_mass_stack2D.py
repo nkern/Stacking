@@ -20,7 +20,6 @@ import sys
 
 from caustic_class_stack2D import *
 from caustic_universal_stack2D import *
-from CausticMass import *
 
 ## FLAGS ##
 self_stack	= True			# Run self-stack or bin-stack
@@ -64,15 +63,15 @@ varib = {'c':c,'h':h,'H0':H0,'q':q,'beta':beta,'fbeta':fbeta,'r_limit':r_limit,'
 ## INITIALIZATION ##
 U = universal(varib)
 SS = selfstack(varib)
-C = Caustic()
+
 ###################
 ##### PROGRAM #####
 ###################
-U.print_separation('Running caustic_mass_stack2D.py')
+U.print_separation('## Running caustic_mass_stack2D.py')
 U.print_varibs(varib)
 
 ## Load Halo Data
-U.print_separation('...Loading Halos',type=2)
+U.print_separation('# ...Loading Halos',type=2)
 HaloID,HaloData = U.load_halos()
 # Sort Halos by A Priori Known Descending Mass (Mass Critical 200)
 HaloID,HaloData = U.sort_halos(HaloID,HaloData)
@@ -80,11 +79,11 @@ HaloID,HaloData = U.sort_halos(HaloID,HaloData)
 M_crit200,R_crit200,Z,SRAD,ESRAD,HVD,HPX,HPY,HPZ,HVX,HVY,HVZ = HaloData
 
 ## Load Galaxy Data
-U.print_separation('...Loading Galaxies',type=2)
+U.print_separation('# ...Loading Galaxies',type=2)
 Halo_P,Halo_V,Gal_P,Gal_V,Gal_Mags,HaloData = U.configure_galaxies(HaloID,HaloData)
 
 ## Solve for Ensemble number: ens_num 
-U.print_separation('...Starting Ensemble Loop',type=2)
+U.print_separation('# ...Starting Ensemble Loop',type=2)
 j = 0
 for k in np.array([ens_num]):
 
