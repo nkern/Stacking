@@ -18,7 +18,7 @@ import time
 
 ## Program ##
 
-class universal(object):
+class universal:
 
 	def __init__(self,varib):
 		''' Adding permanent program variables to class namespace'''
@@ -203,11 +203,11 @@ class universal(object):
 		if type==1:
 			print ''
 			print '-'*60
-			print '##',str(text)
+			print str(text)
 			print '-'*60
 		elif type==2:
 			print ''
-			print '#',str(text)
+			print str(text)
 			print '-'*30
 		return
 

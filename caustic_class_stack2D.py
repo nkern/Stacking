@@ -30,6 +30,7 @@ class selfstack:
 		self.U = universal(varib)			
 		self.C = Caustic()
 		self.CS = CausticSurface()
+		self.MC = MassCalc()
 	
 	def build_ensemble(self,r,v,mags,halodata,l):
 		''' 
@@ -193,12 +194,10 @@ class selfstack:
 		# This function takes RA, DEC and Z as first input, for now it is empty, all relavent files go to class dictionary
 		self.CS.main(np.zeros(0),self.C.x_range,self.C.y_range,self.C.img_tot,r200=r_crit200,halo_scale_radius=srad,halo_scale_radius_e=esrad,halo_vdisp=derived_hvd,beta=self.beta)
 
+		## Mass Calculation, leave clus_z blank for now
+		self.MC.main(self.C.x_range,self.CS.vesc_fit,derived_hvd,0,r200=r_crit200,fbr=self.fbeta,H0=self.H0)
 
-
-
-
-
-
+		return self.MC.M200,self.CS.Ar_finalD,self.CS.vesc_fit	
 
 
 
@@ -210,8 +209,11 @@ class selfstack:
 		## Define Arrays for Building Ensemble and LOS
 		# Ensemble Arrays:	[Successive Ensemble Number][Data]
 		# Line of Sight Arrays:	[Line Of Sight][Data]
-		ens_r, ens_v, ens_m = [], [], []
-		los_r, los_v, los_m = [], [], []
+		ens_r, ens_v, ens_m, ens_hvd = [], [], [], []
+		ens_caumass, ens_causurf, ens_nfwsurf = [], [], []
+		los_r, los_v, los_m, los_hvd = [], [], [], []
+		los_caumass, los_causurf, los_nfwsurf = [], [], []
+
 		## Loop over lines of sight
 		for l in range(self.line_num):
 			if self.light_cone == True:
@@ -231,23 +233,59 @@ class selfstack:
 			ens_r.extend(en_r)
 			ens_v.extend(en_v)
 			ens_m.extend(en_m)
-		
+			
 			# Calculate LOS HVD (this is after shiftgapper)
 			ln_within = np.where(ln_r<R_crit200[k])[0]
 			gal_count = len(ln_within)
 			if gal_count <= 3:
 				'''biweightScale can't take less than 4 elements'''
 				# Calculate hvd with numpy std of galaxies within r200 (b/c this is quoted richness)
-				los_hvd = np.std( copy(ln_v)[ln_within] )
+				ln_hvd = np.std( np.copy(ln_v)[ln_within] )
 			else:
 				# Calculate hvd with astStats biweightScale (see Beers 1990)
-				los_hvd = astStats.biweightScale(np.copy(ln_v)[ln_within],9.0)
+				ln_hvd = astStats.biweightScale(np.copy(ln_v)[ln_within],9.0)
 
-			# Running LOS mass estimation
-			self.kernel_caustic_masscalc(r,v,HaloData.T[k],los_hvd,k,l)
+			# Run Caustic Technique for LOS mass estimation
+			ln_caumass,ln_causurf,ln_nfwsurf = self.kernel_caustic_masscalc(r,v,HaloData.T[k],ln_hvd,k,l)
 			
+			# Append LOS Data Arrays
+			los_r.append(ln_r)
+			los_v.append(ln_v)
+			los_m.append(ln_m)
+			los_hvd.append(ln_hvd)
+			los_caumass.append(ln_caumass)
+			los_causurf.append(ln_causurf)
+			los_nfwsurf.append(ln_nfwsurf)
 
+		# Shiftgapper for Ensemble Interloper treatment
+		ens_r,ens_v,ens_m = self.C.shiftgapper(np.vstack([ens_r,ens_v,ens_m]).T).T
 
+		# Reduce system to gal_num richness within r200
+		within = np.where(ens_r <= R_crit200[k])[0]
+		end = within[:self.gal_num*self.line_num + 1][-1]
+		ens_r = ens_r[:end]
+		ens_v = ens_v[:end]
+		ens_m = ens_m[:end]
+
+		# Calculate HVD
+		en_hvd = astStats.biweightScale(np.copy(ens_v),9.0)
+
+		# Caustic Technique for Ensemble
+		en_caumass,en_causurf,en_nfwsurf = self.kernel_caustic_masscalc(ens_r,ens_v,HaloData.T[k],en_hvd,k)
+
+		# Append Ensemble Data Arrays
+		ens_hvd.append(en_hvd)
+		ens_caumass.append(en_caumass)
+
+		# Turn into numpy arrays
+		ens_r,ens_v,ens_m = np.array(ens_r),np.array(ens_v),np.array(ens_m)
+		ens_hvd,ens_caumass = np.array(ens_hvd),np.array(ens_caumass)
+		ens_causurf,ens_nfwsurf = np.array(en_causurf),np.array(en_nfwsurf)
+		los_r,los_v,losm = np.array(los_r),np.array(los_v),np.array(los_m)
+		los_hvd,los_caumass = np.array(los_hvd),np.array(los_caumass)
+		los_causurf,los_nfwsurf = np.array(los_causurf),np.array(los_nfwsurf)
+
+		return ens_r,ens_v,ens_m,ens_hvd,ens_caumass,ens_causurf,ens_nfwsurf,los_r,los_v,los_m,los_hvd,los_caumass,los_causurf,los_nfwsurf,self.C.x_range	
 	
 
 

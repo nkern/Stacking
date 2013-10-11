@@ -27,8 +27,7 @@ scale_data	= False			# Scale data by r200 and vdisp if True
 use_flux	= True			# Using Flux if True, using Sophie if False
 write_data 	= False			# Write Data to Result directories if True
 light_cone	= False			# Input RA|DEC projection data if True, if False inputting x,y,z 3D data
-one_ens		= True			# Only solve for one ensemble cluster if true 
-					# This is generally the case when using an HPC
+one_ens		= True			# Only solve for one ensemble cluster if true, this is generally the case when using an HPC
 
 ## CONSTANTS ##
 c 		= 2.99792e5		# speed of light in km/s
@@ -37,15 +36,24 @@ H0		= h*100.0		# Hubble Constant, km s-1 Mpc-1
 q		= 10.0			# Scale of Gaussian Kernel Density Estimator
 beta		= 0.2			# Velocity Anisotropy Beta parameter, if constant profile
 fbeta		= 0.65			# fbeta value, see 'Diaferio 1999'
-r_limit 	= 1.25			# Radius Cut Scaled by R200
+r_limit 	= 1.5			# Radius Cut Scaled by R200
 v_limit		= 3500.0		# Velocity Cut in km/s
 data_set	= 'Guo30_2'		# Data set to draw semi analytic data from
-
 halo_num	= 100			# Total number of halos loaded
-ens_num		= int(sys.argv[1])	# Number of Ensembles to solve for
-gal_num		= int(sys.argv[2])	# Number of galaxies taken per line of sight
-line_num	= int(sys.argv[3])	# Number of lines of sight to stack over
-method_num	= int(sys.argv[5])	# Self Stacking Method to Use
+
+## RUN DEPENDENT CONSTANTS ##
+if len(sys.argv) > 1:				# If you feed the run with parameters
+	ens_num		= int(sys.argv[1])	# Number of Ensembles to solve for
+	gal_num		= int(sys.argv[2])	# Number of galaxies taken per line of sight
+	line_num	= int(sys.argv[3])	# Number of lines of sight to stack over
+	run_num		= int(sys.argv[4])	# Run Number ID corresponding to given gal_num & line_num geometry
+	method_num	= int(sys.argv[5])	# Self Stacking Method to Use
+else:
+	ens_num		= 1
+	gal_num		= 10
+	line_num	= 10
+	run_num		= 1
+	method_num	= 1
 
 if use_flux == True: 
 	root=str('/nfs/christoq_ls')	# Change directory scheme if using flux or sophie
@@ -53,11 +61,11 @@ else:
 	root=str('/n/Christoq1')
 
 if self_stack == True:							# Change Write Directory Depending on Parameters
-	write_loc = 'ss_m'+str(method_num)+'_run'+str(sys.argv[4])	# Self Stack data-write location
+	write_loc = 'ss_m'+str(method_num)+'_run'+str(run_num)		# Self Stack data-write location
 else:
-	write_loc = 'bs_m'+str(method_num)+'_run'+str(sys.argv[4])	# Bin Stack data-write location
+	write_loc = 'bs_m'+str(method_num)+'_run'+str(run_num)		# Bin Stack data-write location
 
-# Make dictionary for all variables that remain constant throughout duration of program!
+## Make dictionary for above constants
 varib = {'c':c,'h':h,'H0':H0,'q':q,'beta':beta,'fbeta':fbeta,'r_limit':r_limit,'v_limit':v_limit,'data_set':data_set,'halo_num':halo_num,'ens_num':ens_num,'gal_num':gal_num,'line_num':line_num,'method_num':method_num,'write_loc':write_loc,'root':root,'self_stack':self_stack,'scale_data':scale_data,'use_flux':use_flux,'write_data':write_data,'light_cone':light_cone,'one_ens':one_ens}
 
 ## INITIALIZATION ##
@@ -87,14 +95,13 @@ U.print_separation('# ...Starting Ensemble Loop',type=2)
 j = 0
 for k in np.array([ens_num]):
 
-	# Build Ensemble
+	# Build Ensemble and Run Caustic Technique
 	if self_stack:
-		SS.self_stack_clusters(HaloID,HaloData,Halo_P,Halo_V,Gal_P,Gal_V,Gal_Mags,k)
+		ens_r,ens_v,ens_m,ens_hvd,ens_caumass,ens_causurf,ens_nfwsurf,los_r,los_v,los_m,los_hvd,los_caumass,los_causurf,los_nfwsurf,x_range = SS.self_stack_clusters(HaloID,HaloData,Halo_P,Halo_V,Gal_P,Gal_V,Gal_Mags,k)
 	else:
 		BS.bin_stack_clusters()
 
-
-	# Caustic Technique
+	# Condense into Arrays
 	
 
 	j += 1
