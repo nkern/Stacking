@@ -17,9 +17,12 @@ from numpy.linalg import norm
 import matplotlib.pyplot as mp
 import astStats
 import sys
+import cPickle as pkl
 
 from caustic_class_stack2D import *
 from caustic_universal_stack2D import *
+from CausticMass import *
+
 
 ## FLAGS ##
 self_stack	= True			# Run self-stack or bin-stack
@@ -70,7 +73,10 @@ varib = {'c':c,'h':h,'H0':H0,'q':q,'beta':beta,'fbeta':fbeta,'r_limit':r_limit,'
 
 ## INITIALIZATION ##
 U = universal(varib)
-SS = selfstack(varib)
+C = Caustic()
+CS = CausticSurface()
+MC = MassCalc()
+SS = selfstack(varib,U,C,CS,MC)		# Pass selfstack class variable dictionary, and pointer to other class instances
 
 ###################
 ##### PROGRAM #####
@@ -107,6 +113,15 @@ for k in np.array([ens_num]):
 	j += 1
 
 
+
+
+### Save Data into Pickle Files ###
+data = {}
+
+
+
+output = open('data.pkl','wb')
+pkl.dump(SS.__dict__,output)
 
 
 

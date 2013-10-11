@@ -13,8 +13,6 @@ self_stack:
 
 ## Import Modules ##
 import numpy as np
-from caustic_universal_stack2D import universal
-from CausticMass import *
 import numpy.random as npr
 import astStats
 
@@ -22,15 +20,16 @@ import astStats
 
 class selfstack:
 
-	def __init__(self,varib):
+	def __init__(self,varib,U,C,CS,MC):
 		''' Initial function for class selfstack '''
 		# Adding dictionary varib to class namespace
 		self.__dict__.update(varib)
-		# Initializing the universal class 
-		self.U = universal(varib)			
-		self.C = Caustic()
-		self.CS = CausticSurface()
-		self.MC = MassCalc()
+		# Initializing previously instanced classes 
+		self.U = U		
+		self.C = C
+		self.CS = CS
+		self.MC = MC
+
 	
 	def build_ensemble(self,r,v,mags,halodata,l):
 		''' 
