@@ -122,12 +122,12 @@ for k in np.array([ens_num]):
 
 ### Save Data into Pickle Files ###
 if write_data == True:
-	pkl_file = open(root+'/nkern/Stacking/stack_data/'+write_loc+'/Data.pkl','wb')
+	pkl_file = open(root+'/nkern/Stacking/stack_data/'+write_loc+'/Ensemble_'+str(ens_num)+'_Data.pkl','wb')
 	output = pkl.Pickler(pkl_file)
+	output.dump(stack_data)
 	output.dump(varib)
 	output.dump([HaloID,Halo_P,Halo_V,Gal_P,Gal_V,Gal_Mags,HaloData])
-	output.dump(stack_data)
-
+	pkl_file.close()
 
 
 
