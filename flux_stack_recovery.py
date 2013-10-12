@@ -35,9 +35,11 @@ def ss_recover():
 
 	## Load Data ##
 	# Make wanted variables global
-	global varib,HaloID,Halo_P,Halo_V,Gal_P,Gal_V,Gal_Mags,HaloData,x_range
+	global varib,HaloID,Halo_P,Halo_V,Gal_P,Gal_V,Gal_Mags,M_crit200,R_crit200,Z,SRAD,ESRAD,HVD,x_range
 	global ENS_CAUMASS,ENS_CAUSURF,ENS_NFWSURF,LOS_CAUMASS,LOS_CAUSURF,LOS_NFWSURF
 	global ENS_R,ENS_V,ENS_M,LOS_R,LOS_V,LOS_M,ENS_HVD,LOS_HVD
+
+	global ens_r,ens_caumass,los_r,los_caumass
 
 	# Create them as lists
 	ENS_CAUMASS,ENS_CAUSURF,ENS_NFWSURF,LOS_CAUMASS,LOS_CAUSURF,LOS_NFWSURF = [],[],[],[],[],[]
@@ -58,8 +60,8 @@ def ss_recover():
 	ENS_R.append(ens_r)
 	ENS_V.append(ens_v)
 	ENS_M.append(ens_m)
-	ENS_HVD.append(ens_hvd)
-	ENS_CAUMASS.append(ens_caumass)
+	ENS_HVD.append(float(ens_hvd))
+	ENS_CAUMASS.append(float(ens_caumass))
 	ENS_CAUSURF.append(ens_causurf)
 	ENS_NFWSURF.append(ens_nfwsurf)
 	LOS_R.append(los_r)
@@ -85,12 +87,14 @@ def ss_recover():
 
 		ens_r,ens_v,ens_m,ens_hvd,ens_caumass,ens_causurf,ens_nfwsurf,los_r,los_v,los_m,los_hvd,los_caumass,los_causurf,los_nfwsurf,x_range = stack_data
 
+		
+
 		# Append stack_data to major lists
 		ENS_R.append(ens_r)
 		ENS_V.append(ens_v)
 		ENS_M.append(ens_m)
-		ENS_HVD.append(ens_hvd)
-		ENS_CAUMASS.append(ens_caumass)
+		ENS_HVD.append(float(ens_hvd))
+		ENS_CAUMASS.append(float(ens_caumass))
 		ENS_CAUSURF.append(ens_causurf)
 		ENS_NFWSURF.append(ens_nfwsurf)
 		LOS_R.append(los_r)
@@ -118,6 +122,41 @@ def ss_recover():
 	LOS_CAUMASS = np.array(LOS_CAUMASS)
 	LOS_CAUSURF = np.array(LOS_CAUSURF)
 	LOS_NFWSURF = np.array(LOS_NFWSURF)
+
+	#Update global namespace with varib attributes
+	globals().update(varib)
+
+	### Statistical Calculations ###
+	
+	global ens_mbias,ens_mscat,los_mbias,los_mscat,ens_vbias,ens_vscat,los_vbias,los_vscat
+	global maLOS_CAUMASS,maLOS_HVD,ens_mfrac,ens_hvdfrac,los_mfrac,los_hvdfrac
+
+	# Defined a Masked array for sometimes zero terms
+	maLOS_CAUMASS = ma.masked_array(LOS_CAUMASS,mask=LOS_CAUMASS==0)	# Mask '0' values
+	maLOS_HVD = ma.masked_array(LOS_HVD,mask=LOS_HVD==0)			# Mask '0' values
+
+	# Ensemble Mass Fraction Arrays after taking logarithm. 
+	ens_mfrac = ma.log(ENS_CAUMASS/M_crit200)
+	ens_hvdfrac = ma.log(ENS_HVD/HVD)
+
+	# LOS Mass Fraction Arrays
+	array_size = halo_num		# halo_num for horizontal avg first, line_num for vertical avg first. See sites page
+	los_mfrac,los_hvdfrac = np.zeros(array_size),np.zeros(array_size)
+	for a in range(array_size):
+		try:
+			los_mfrac[a] = astStats.biweightLocation( ma.copy( ma.log( maLOS_CAUMASS[a]/M_crit200[a]) ), 6.0 )
+			los_hvdfrac[a] = astStats.biweightLocation( ma.copy( ma.log( maLOS_HVD[a]/HVD[a]) ), 6.0 )
+		except:
+			los_mfrac[a] = ma.mean( ma.log( maLOS_CAUMASS[a]/M_crit200[a]) )
+			los_hvdfrac[a] = ma.mean( ma.log( maLOS_HVD[a]/HVD[a]) )
+
+	# Bias and Scatter Calculation
+	ens_mbias,ens_mscat	= astStats.biweightLocation(ma.copy(ens_mfrac),6.0),astStats.biweightScale(ma.copy(ens_mfrac),9.0)
+	los_mbias,los_mscat	= astStats.biweightLocation(ma.copy(los_mfrac),6.0),astStats.biweightScale(ma.copy(los_mfrac),9.0)
+	ens_vbias,ens_vscat	= astStats.biweightLocation(ma.copy(ens_hvdfrac),6.0),astStats.biweightScale(ma.copy(ens_hvdfrac),9.0)
+	los_vbias,los_vscat	= astStats.biweightLocation(ma.copy(los_hvdfrac),6.0),astStats.biweightScale(ma.copy(los_hvdfrac),9.0)
+
+
 	return
 
 

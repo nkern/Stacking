@@ -112,9 +112,6 @@ for k in np.array([ens_num]):
 	else:
 		BS.bin_stack_clusters()
 
-	# Condense into Arrays
-	
-
 	j += 1
 
 

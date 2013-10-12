@@ -268,7 +268,7 @@ class selfstack:
 		ens_m = ens_m[:end]
 
 		# Calculate HVD
-		en_hvd = astStats.biweightScale(np.copy(ens_v),9.0)
+		en_hvd = astStats.biweightScale(np.copy(ens_v)[within],9.0)
 
 		# Caustic Technique for Ensemble
 		en_caumass,en_causurf,en_nfwsurf = self.kernel_caustic_masscalc(ens_r,ens_v,HaloData.T[k],en_hvd,k)
