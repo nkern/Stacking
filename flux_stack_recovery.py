@@ -129,7 +129,7 @@ def ss_recover():
 	### Statistical Calculations ###
 	
 	global ens_mbias,ens_mscat,los_mbias,los_mscat,ens_vbias,ens_vscat,los_vbias,los_vscat
-	global maLOS_CAUMASS,maLOS_HVD,ens_mfrac,ens_hvdfrac,los_mfrac,los_hvdfrac
+	global maLOS_CAUMASS,maLOS_HVD,ens_mfrac,ens_vfrac,los_mfrac,los_vfrac
 
 	# Defined a Masked array for sometimes zero terms
 	maLOS_CAUMASS = ma.masked_array(LOS_CAUMASS,mask=LOS_CAUMASS==0)	# Mask '0' values
@@ -137,24 +137,24 @@ def ss_recover():
 
 	# Ensemble Mass Fraction Arrays after taking logarithm. 
 	ens_mfrac = ma.log(ENS_CAUMASS/M_crit200)
-	ens_hvdfrac = ma.log(ENS_HVD/HVD)
+	ens_vrac = ma.log(ENS_HVD/HVD)
 
 	# LOS Mass Fraction Arrays
 	array_size = halo_num		# halo_num for horizontal avg first, line_num for vertical avg first. See sites page
-	los_mfrac,los_hvdfrac = np.zeros(array_size),np.zeros(array_size)
+	los_mfrac,los_vfrac = np.zeros(array_size),np.zeros(array_size)
 	for a in range(array_size):
 		try:
 			los_mfrac[a] = astStats.biweightLocation( ma.copy( ma.log( maLOS_CAUMASS[a]/M_crit200[a]) ), 6.0 )
-			los_hvdfrac[a] = astStats.biweightLocation( ma.copy( ma.log( maLOS_HVD[a]/HVD[a]) ), 6.0 )
+			los_vfrac[a] = astStats.biweightLocation( ma.copy( ma.log( maLOS_HVD[a]/HVD[a]) ), 6.0 )
 		except:
 			los_mfrac[a] = ma.mean( ma.log( maLOS_CAUMASS[a]/M_crit200[a]) )
-			los_hvdfrac[a] = ma.mean( ma.log( maLOS_HVD[a]/HVD[a]) )
+			los_vfrac[a] = ma.mean( ma.log( maLOS_HVD[a]/HVD[a]) )
 
 	# Bias and Scatter Calculation
 	ens_mbias,ens_mscat	= astStats.biweightLocation(ma.copy(ens_mfrac),6.0),astStats.biweightScale(ma.copy(ens_mfrac),9.0)
 	los_mbias,los_mscat	= astStats.biweightLocation(ma.copy(los_mfrac),6.0),astStats.biweightScale(ma.copy(los_mfrac),9.0)
-	ens_vbias,ens_vscat	= astStats.biweightLocation(ma.copy(ens_hvdfrac),6.0),astStats.biweightScale(ma.copy(ens_hvdfrac),9.0)
-	los_vbias,los_vscat	= astStats.biweightLocation(ma.copy(los_hvdfrac),6.0),astStats.biweightScale(ma.copy(los_hvdfrac),9.0)
+	ens_vbias,ens_vscat	= astStats.biweightLocation(ma.copy(ens_vfrac),6.0),astStats.biweightScale(ma.copy(ens_vfrac),9.0)
+	los_vbias,los_vscat	= astStats.biweightLocation(ma.copy(los_vfrac),6.0),astStats.biweightScale(ma.copy(los_vfrac),9.0)
 
 
 	return
