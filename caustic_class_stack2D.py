@@ -11,6 +11,7 @@ self_stack:
 	attributes:
 '''
 
+
 ## Import Modules ##
 import numpy as np
 import numpy.random as npr
