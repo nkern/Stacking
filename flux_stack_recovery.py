@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib.pyplot as mp
 import numpy.ma as ma
 import astStats
+import sys
 
 ## Flags ##
 use_flux	= True			# Running on flux or sophie?
@@ -43,13 +44,12 @@ def ss_recover():
 	ENS_R,ENS_V,ENS_M,LOS_R,LOS_V,LOS_M,ENS_HVD,LOS_HVD = [],[],[],[],[],[],[],[]
 
 	# Initialization step 
-	j = 0
-	pkl_file = open(root+'/nkern/Stacking/stack_data/'+write_loc+'/Ensemble_'+str(j)+'_Data.pkl','rb')
+	pkl_file = open(root+'/nkern/Stacking/stack_data/'+write_loc+'/Ensemble_'+str(0)+'_Data.pkl','rb')
 	input = pkl.Unpickler(pkl_file)
 
-	varib 							= input.load()
+	stack_data 						= input.load()
+	varib							= input.load()
 	HaloID,Halo_P,Halo_V,Gal_P,Gal_V,Gal_Mags,HaloData	= input.load()
-	stack_data						= input.load()
 
 	ens_r,ens_v,ens_m,ens_hvd,ens_caumass,ens_causurf,ens_nfwsurf,los_r,los_v,los_m,los_hvd,los_caumass,los_causurf,los_nfwsurf,x_range = stack_data
 	M_crit200,R_crit200,Z,SRAD,ESRAD,HVD = HaloData	
@@ -71,15 +71,17 @@ def ss_recover():
 	LOS_NFWSURF.append(los_nfwsurf)
 
 	# Loop over ensembles
+	j = 0
 	for i in np.arange(1,100):
+		# Progress Bar
+		sys.stdout.write("Progress... "+str(j)+"\r")
+		sys.stdout.flush()
 		j += 1
 
-		pkl_file = open(root+'/nkern/Stacking/stack_data/'+write_loc+'/Ensemble_'+str(j)+'_Data.pkl','rb')
+		pkl_file = open(root+'/nkern/Stacking/stack_data/'+write_loc+'/Ensemble_'+str(i)+'_Data.pkl','rb')
 		input = pkl.Unpickler(pkl_file)
 
-		data1 							= input.load()
-		data2							= input.load()
-		stack_data						= input.load()
+		stack_data = input.load()
 
 		ens_r,ens_v,ens_m,ens_hvd,ens_caumass,ens_causurf,ens_nfwsurf,los_r,los_v,los_m,los_hvd,los_caumass,los_causurf,los_nfwsurf,x_range = stack_data
 
@@ -98,6 +100,8 @@ def ss_recover():
 		LOS_CAUMASS.append(los_caumass)
 		LOS_CAUSURF.append(los_causurf)
 		LOS_NFWSURF.append(los_nfwsurf)
+	
+	print ''
 
 	# Convert to arrays
 	ENS_R = np.array(ENS_R)
