@@ -17,18 +17,19 @@ from numpy.linalg import norm
 import matplotlib.pyplot as mp
 import astStats
 import sys
+import time
 import cPickle as pkl
 
 from caustic_class_stack2D import *
 from caustic_universal_stack2D import *
-from CausticMass import *
+from CausticMass import Caustic,CausticSurface,MassCalc
 
 
 ## FLAGS ##
 self_stack	= True			# Run self-stack or bin-stack
 scale_data	= False			# Scale data by r200 and vdisp if True
 use_flux	= True			# Using Flux if True, using Sophie if False
-write_data 	= False			# Write Data to Result directories if True
+write_data 	= True			# Write Data to Result directories if True
 light_cone	= False			# Input RA|DEC projection data if True, if False inputting x,y,z 3D data
 one_ens		= True			# Only solve for one ensemble cluster if true, this is generally the case when using an HPC
 
@@ -43,6 +44,7 @@ r_limit 	= 1.5			# Radius Cut Scaled by R200
 v_limit		= 3500.0		# Velocity Cut in km/s
 data_set	= 'Guo30_2'		# Data set to draw semi analytic data from
 halo_num	= 100			# Total number of halos loaded
+run_time	= time.asctime()	# Time when program was started
 
 ## RUN DEPENDENT CONSTANTS ##
 if len(sys.argv) > 1:				# If you feed the run with parameters
@@ -69,7 +71,7 @@ else:
 	write_loc = 'bs_m'+str(method_num)+'_run'+str(run_num)		# Bin Stack data-write location
 
 ## Make dictionary for above constants
-varib = {'c':c,'h':h,'H0':H0,'q':q,'beta':beta,'fbeta':fbeta,'r_limit':r_limit,'v_limit':v_limit,'data_set':data_set,'halo_num':halo_num,'ens_num':ens_num,'gal_num':gal_num,'line_num':line_num,'method_num':method_num,'write_loc':write_loc,'root':root,'self_stack':self_stack,'scale_data':scale_data,'use_flux':use_flux,'write_data':write_data,'light_cone':light_cone,'one_ens':one_ens}
+varib = {'c':c,'h':h,'H0':H0,'q':q,'beta':beta,'fbeta':fbeta,'r_limit':r_limit,'v_limit':v_limit,'data_set':data_set,'halo_num':halo_num,'ens_num':ens_num,'gal_num':gal_num,'line_num':line_num,'method_num':method_num,'write_loc':write_loc,'root':root,'self_stack':self_stack,'scale_data':scale_data,'use_flux':use_flux,'write_data':write_data,'light_cone':light_cone,'one_ens':one_ens,'run_time':run_time}
 
 ## INITIALIZATION ##
 U = universal(varib)
@@ -103,7 +105,10 @@ for k in np.array([ens_num]):
 
 	# Build Ensemble and Run Caustic Technique
 	if self_stack:
-		ens_r,ens_v,ens_m,ens_hvd,ens_caumass,ens_causurf,ens_nfwsurf,los_r,los_v,los_m,los_hvd,los_caumass,los_causurf,los_nfwsurf,x_range = SS.self_stack_clusters(HaloID,HaloData,Halo_P,Halo_V,Gal_P,Gal_V,Gal_Mags,k)
+		stack_data = SS.self_stack_clusters(HaloID,HaloData,Halo_P,Halo_V,Gal_P,Gal_V,Gal_Mags,k)
+		# unpack data
+		ens_r,ens_v,ens_m,ens_hvd,ens_caumass,ens_causurf,ens_nfwsurf,los_r,los_v,los_m,los_hvd,los_caumass,los_causurf,los_nfwsurf,x_range = stack_data
+
 	else:
 		BS.bin_stack_clusters()
 
@@ -116,12 +121,12 @@ for k in np.array([ens_num]):
 
 
 ### Save Data into Pickle Files ###
-data = {}
-
-
-
-output = open('data.pkl','wb')
-pkl.dump(SS.__dict__,output)
+if write_data == True:
+	pkl_file = open(root+'/nkern/Stacking/stack_data/'+write_loc+'/Data.pkl','wb')
+	output = pkl.Pickler(pkl_file)
+	output.dump(varib)
+	output.dump([HaloID,Halo_P,Halo_V,Gal_P,Gal_V,Gal_Mags,HaloData])
+	output.dump(stack_data)
 
 
 
