@@ -29,7 +29,7 @@ from CausticMass import Caustic,CausticSurface,MassCalc
 self_stack	= True			# Run self-stack or bin-stack
 scale_data	= False			# Scale data by r200 and vdisp if True
 use_flux	= True			# Using Flux if True, using Sophie if False
-write_data 	= True			# Write Data to Result directories if True
+write_data 	= False			# Write Data to Result directories if True
 light_cone	= False			# Input RA|DEC projection data if True, if False inputting x,y,z 3D data
 one_ens		= True			# Only solve for one ensemble cluster if true, this is generally the case when using an HPC
 clean_ens	= False			# Do an extra shiftgapper on ensemble before the lines of sight get stacked.
@@ -77,9 +77,7 @@ varib = {'c':c,'h':h,'H0':H0,'q':q,'beta':beta,'fbeta':fbeta,'r_limit':r_limit,'
 ## INITIALIZATION ##
 U = universal(varib)
 C = Caustic()
-CS = CausticSurface()
-MC = MassCalc()
-SS = selfstack(varib,U,C,CS,MC)		# Pass selfstack class variable dictionary, and pointer to other class instances
+SS = selfstack(varib,U,C,CausticSurface,MassCalc)		# Pass varib dictionary, and pointer to other classes and class instances.
 
 ###################
 ##### PROGRAM #####

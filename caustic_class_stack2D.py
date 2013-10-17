@@ -21,15 +21,15 @@ import astStats
 
 class selfstack:
 
-	def __init__(self,varib,U,C,CS,MC):
+	def __init__(self,varib,U,C,CausticSurface,MassCalc):
 		''' Initial function for class selfstack '''
 		# Adding dictionary varib to class namespace
 		self.__dict__.update(varib)
 		# Initializing previously instanced classes 
 		self.U = U		
 		self.C = C
-		self.CS = CS
-		self.MC = MC
+		self.CausticSurface = CausticSurface
+		self.MassCalc = MassCalc
 
 	
 	def build_ensemble(self,r,v,mags,halodata,l):
@@ -108,10 +108,10 @@ class selfstack:
 
 		## Caustic Surface Calculation
 		# This function takes RA, DEC and Z as first input, for now it is empty, all relavent files go to class dictionary
-		self.CS.main(np.zeros(0),self.C.x_range,self.C.y_range,self.C.img_tot,r200=r_crit200,halo_scale_radius=srad,halo_scale_radius_e=esrad,halo_vdisp=derived_hvd,beta=self.beta)
+		self.CS = self.CausticSurface(np.zeros(0),self.C.x_range,self.C.y_range,self.C.img_tot,r200=r_crit200,halo_scale_radius=srad,halo_scale_radius_e=esrad,halo_vdisp=derived_hvd,beta=self.beta)
 
 		## Mass Calculation, leave clus_z blank for now
-		self.MC.main(self.C.x_range,self.CS.vesc_fit,derived_hvd,0,r200=r_crit200,fbr=self.fbeta,H0=self.H0)
+		self.MC = self.MassCalc(self.C.x_range,self.CS.vesc_fit,derived_hvd,0,r200=r_crit200,fbr=self.fbeta,H0=self.H0)
 
 		return self.MC.M200,self.CS.Ar_finalD,self.CS.vesc_fit	
 
