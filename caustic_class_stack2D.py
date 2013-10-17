@@ -40,7 +40,6 @@ class selfstack:
 		- Interloper treatment is always done for the LOS, and can be done for ensemble_los if desired
 		'''
 		##
-		clean_en_los = False					# This flag toggles extra shiftgapper before ensemble stacking
 		gal_num = self.gal_num	
 	
 		## Program
@@ -51,98 +50,13 @@ class selfstack:
 		r,v,mags = r[bright],v[bright],mags[bright]
 
 		if self.method_num == 0:
-			'''Picking top brightest galaxies, such that there are gal_num galaxies within r200'''
-			# define indicies of galaxies within r200
-			within = np.where(r<r_crit200)[0]
-			# pick out gal_num 'th index in list, (include extra to counter shiftgapper's possible dimishement of richness)
-			excess = gal_num / 5.0				# galaxy excess to counter shiftgapper
-			end = within[:gal_num + excess + 1][-1]		# instead of indexing I am slicing b/c of chance of not enough gals existing...	
-			# Build Ensemble (en => ensemble)
-			if clean_en_los == True:
-				excess = gal_num * 2.0 / 5.0		# make excess a bit larger than previously defined
-				end = within[:gal_num + excess + 1][-1]
-				r2,v2,mags2 = self.C.shiftgapper(np.vstack([r[:end],v[:end],mags[:end]]).T).T # Shiftgapper inputs and outputs data as transpose...
-				within = np.where(r2<r_crit200)[0]	# re-calculate within array with new sample
-				excess = gal_num / 5.0
-				end = within[:gal_num + excess + 1][-1]
-				# Append to ensemble array
-				en_r,en_v,en_m = r2[:end],v2[:end],mags2[:end]
-			else:
-				en_r,en_v,en_m = r[0:end],v[0:end],mags[0:end]
-			# Build Line of Sight (ln => line of sight)
-			# shiftgapper on line of sight
-			excess = gal_num * 2.0 / 5.0
-			end = within[:gal_num + excess + 1][-1]
-			r2,v2,mags2 = self.C.shiftgapper(np.vstack([r[:end],v[:end],mags[:end]]).T).T
-			within = np.where(r2<r_crit200)[0]		# re-calculate within array with new sample
-			# Now feed ln arrays correct gal_num richness within r200
-			end = within[:gal_num + 1][-1]
-			ln_r,ln_v,ln_m = r2[:end],v2[:end],mags2[:end]	
-			# Done! Now we have en_r and ln_r arrays, which will either be stacked (former) or put straight into Caustic technique (latter)
-			# Note that the pure los and ensemble los do not necessarily have identical phase space due to shiftgapper treatment
+			en_r,en_v,en_m,ln_r,ln_v,ln_m = self.build_method_0(r,v,mags,r_crit200)
 
 		elif self.method_num == 1:
-			'''Randomly choosing galaxies until gal_num galaxies are within r200'''
-			# reduce size of sample to something reasonable within magnitude limits
-			sample = gal_num * 25				# arbitrary coefficient, see sites page post Apr 24th, 2013 for more info
-			r,v,mags = r[:sample],v[:sample],mags[:sample]
-			samp_size = len(r)				# actual size of sample (might be less than gal_num*25)
-			# create random numbered array for galaxy selection
-			excess = gal_num * 2.0 / 5.0
-			samp_num = gal_num + excess			# sample size of randomly generated numbers, start too low on purpose, then raise in loop
-			loop = True					# break condition
-			while loop == True:				# see method 0 comments on variables such as 'excess' and 'within' and 'end'
-				for j in range(3):			# before upping sample size, try to get a good sample a few times
-					rando = npr.randint(0,samp_size,samp_num)
-					within = np.where(r[rando]<=r_crit200)[0]
-					if len(within) >= gal_num + excess:
-						loop = False
-				if len(within) < gal_num + excess:
-					samp_num += 2
-			### Build Ensemble
-			if clean_en_los == True:
-				r2,v2,mags2 = self.C.shiftgapper(np.vstack([r[rando],v[rando],mags[rando]]).T).T
-				within = np.where(r2<r_crit200)[0]
-				excess = gal_num / 5.0
-				end = within[:gal_num + excess + 1][-1]
-				# Append to ensemble array
-				en_r,en_v,en_m = r2[:end],v2[:end],mags2[:end]
-			else:
-				excess = gal_num / 5.0
-				end = within[:gal_num + excess + 1][-1]
-				en_r,en_v,en_m = r[rando][:end],v[rando][:end],mags[rando][:end]
-
-			### Build LOS
-			excess = gal_num / 5.0
-			end = within[:gal_num + excess + 1][-1]
-			r2,v2,mags2 = self.C.shiftgapper(np.vstack([r[rando][:end],v[rando][:end],mags[rando][:end]]).T).T
-			within = np.where(r2<r_crit200)[0]
-			end = within[:gal_num + 1][-1]
-			ln_r,ln_v,ln_m = r2[:end],v2[:end],mags2[:end]
-			# Done! Now we have en_r and ln_r arrays (ensemble and line of sight arrays)
-
+			en_r,en_v,en_m,ln_r,ln_v,ln_m = self.build_method_1(r,v,mags,r_crit200)
+		
 		elif self.method_num == 2:
-			'''Ordered Set of galaxies with respect to magnitude'''
-			'''
-			### NOT FINSHED YET !! ###
-			### Build Ensemble 
-			within = np.where(r<r_crit200)[0]
-			excess = gal_num / 5.0
-			end = gal_num + excess
-			if clean_end_los == True:
-				pass		
-	
-			end = within[gal_num*line_num + line_num]
-			en_r,en_v,en_mags,en_gpx3d,en_gpy3d,en_gpz3d,en_gvx3d,en_gvy3d,en_gvz3d = r[:end][l::line_num],v[:end][l::line_num],mags[:end][l::line_num],gpx3d[:end][l::line_num],gpy3d[:end][l::line_num],gpz3d[:end][l::line_num],gvx3d[:end][l::line_num],gvy3d[:end][l::line_num],gvz3d[:end][l::line_num]	
-			### Build LOS
-			end = within[:gal_num*line_num + 5*line_num][-1] + 1
-			rt,vt,magst,gpx3dt,gpy3dt,gpz3dt,gvx3dt,gvy3dt,gvz3dt = U.shiftgapper(vstack((r[:end][l::line_num],v[:end][l::line_num],mags[:end][l::line_num],gpx3d[:end][l::line_num],gpy3d[:end][l::line_num],gpz3d[:end][l::line_num],gvx3d[:end][l::line_num],gvy3d[:end][l::line_num],gvz3d[:end][l::line_num])).T).T
-			within = where(rt<r_crit200)[0]
-			end = within[:gal_num][-1] + 1
-			r,v,mags,gpx3d,gpy3d,gpz3d,gvx3d,gvy3d,gvz3d = rt[:end],vt[:end],magst[:end],gpx3dt[:end],gpy3dt[:end],gpz3dt[:end],gvx3dt[:end],gvy3dt[:end],gvz3dt[:end] 
-			###########################
-			'''
-			pass
+			en_r,en_v,en_m,ln_r,ln_v,ln_m = self.build_method_2(r,v,mags,r_crit200)
 
 		return en_r,en_v,en_m,ln_r,ln_v,ln_m
 
@@ -154,6 +68,9 @@ class selfstack:
 		- CausticSurface.main()
 		- MassCalc.main()
 		'''
+		## Unpack HaloData Array into Namespace
+		m_crit200,r_crit200,z,srad,esrad,hvd = halodata
+
 		## Print Details
 		if l == None:
 			text = '## Working On Cluster #'+str(k)+''
@@ -161,9 +78,8 @@ class selfstack:
 			text = '## Working On Cluster #'+str(k)+'\n## Line of Sight #'+str(l)+''
 		self.U.print_separation(text,type=2)
 
-
-		## Unpack HaloData Array into Namespace
-		m_crit200,r_crit200,z,srad,esrad,hvd = halodata
+		richness = len( np.where(r<r_crit200)[0])
+		print 'Richness Within R200 =',richness
 
 		## Mirror Phase Space Velocity Data if mirror == True
 		mirror = True
@@ -246,7 +162,7 @@ class selfstack:
 				ln_hvd = astStats.biweightScale(np.copy(ln_v)[ln_within],9.0)
 
 			# Run Caustic Technique for LOS mass estimation
-			ln_caumass,ln_causurf,ln_nfwsurf = self.kernel_caustic_masscalc(r,v,HaloData.T[k],ln_hvd,k,l)
+			ln_caumass,ln_causurf,ln_nfwsurf = self.kernel_caustic_masscalc(ln_r,ln_v,HaloData.T[k],ln_hvd,k,l)
 			
 			# Append LOS Data Arrays
 			los_r.append(ln_r)
@@ -268,7 +184,7 @@ class selfstack:
 		ens_m = ens_m[:end]
 
 		# Calculate HVD
-		en_hvd = astStats.biweightScale(np.copy(ens_v)[within],9.0)
+		en_hvd = astStats.biweightScale(np.copy(ens_v)[np.where(ens_r<=R_crit200[k])],9.0)
 
 		# Caustic Technique for Ensemble
 		en_caumass,en_causurf,en_nfwsurf = self.kernel_caustic_masscalc(ens_r,ens_v,HaloData.T[k],en_hvd,k)
@@ -286,9 +202,144 @@ class selfstack:
 		los_causurf,los_nfwsurf = np.array(los_causurf),np.array(los_nfwsurf)
 
 		return ens_r,ens_v,ens_m,ens_hvd,ens_caumass,ens_causurf,ens_nfwsurf,los_r,los_v,los_m,los_hvd,los_caumass,los_causurf,los_nfwsurf,self.C.x_range	
-	
 
 
+	def build_method_0(self,r,v,mags,r_crit200):
+		'''Picking top brightest galaxies, such that there are gal_num galaxies within r200'''
+		gal_num = self.gal_num
 
+		# define indicies of galaxies within r200
+		within = np.where(r<r_crit200)[0]
+		# pick out gal_num 'th index in list, (include extra to counter shiftgapper's possible dimishement of richness)
+		if gal_num < 10:
+			excess = gal_num * 3.0 / 5.0				# galaxy excess to counter shiftgapper
+		else:
+			excess = gal_num / 5.0
+		end = within[:gal_num + excess + 1][-1]		# instead of indexing I am slicing b/c of chance of not enough gals existing...	
+		# Build Ensemble (en => ensemble)
+		if self.clean_ens == True:
+			excess *= 2.0				# make excess a bit larger than previously defined
+			end = within[:gal_num + excess + 1][-1]
+			r2,v2,mags2 = self.C.shiftgapper(np.vstack([r[:end],v[:end],mags[:end]]).T).T # Shiftgapper inputs and outputs data as transpose...
+			within = np.where(r2<r_crit200)[0]	# re-calculate within array with new sample
+			excess = gal_num / 5.0
+			end = within[:gal_num + excess + 1][-1]
+			# Append to ensemble array
+			en_r,en_v,en_m = r2[:end],v2[:end],mags2[:end]
+		else:
+			en_r,en_v,en_m = r[0:end],v[0:end],mags[0:end]
+		# Build Line of Sight (ln => line of sight)
+		# shiftgapper on line of sight
+		r2,v2,mags2 = self.C.shiftgapper(np.vstack([r[:end],v[:end],mags[:end]]).T).T
+		within = np.where(r2<r_crit200)[0]		# re-calculate within array with new sample
+		# Now feed ln arrays correct gal_num richness within r200
+		end = within[:gal_num + 1][-1]
+		ln_r,ln_v,ln_m = r2[:end],v2[:end],mags2[:end]	
+		# Done! Now we have en_r and ln_r arrays, which will either be stacked (former) or put straight into Caustic technique (latter)
+		return en_r,en_v,en_m,ln_r,ln_v,ln_m
+
+	def build_method_1(self,r,v,mags,r_crit200):
+		'''Randomly choosing bright galaxies until gal_num galaxies are within r200'''
+		gal_num = self.gal_num
+
+		# reduce size of sample to something reasonable within magnitude limits
+		sample = gal_num * 25				# arbitrary coefficient, see sites page post Apr 24th, 2013 for more info
+		r,v,mags = r[:sample],v[:sample],mags[:sample]
+		samp_size = len(r)				# actual size of sample (might be less than gal_num*25)
+
+		# create random numbered array for galaxy selection
+		if gal_num < 10:				# when gal_num < 10, has trouble hitting gal_num richness inside r200
+			excess = gal_num * 4.0 / 5.0
+		else:
+			excess = gal_num * 2.0 / 5.0
+
+		samp_num = gal_num + excess			# sample size of randomly generated numbers, start too low on purpose, then raise in loop
+		loop = True					# break condition
+		while loop == True:				# see method 0 comments on variables such as 'excess' and 'within' and 'end'
+			for j in range(3):			# before upping sample size, try to get a good sample a few times
+				rando = npr.randint(0,samp_size,samp_num)
+				within = np.where(r[rando]<=r_crit200)[0]
+				if len(within) >= gal_num + excess:
+					loop = False
+			if len(within) < gal_num + excess:
+				samp_num += 2
+		### Build Ensemble
+		if self.clean_ens == True:
+
+			r2,v2,mags2 = self.C.shiftgapper(np.vstack([r[rando],v[rando],mags[rando]]).T).T
+			within = np.where(r2<r_crit200)[0]
+			excess = gal_num / 5.0
+			end = within[:gal_num + excess + 1][-1]
+			# Append to ensemble array
+			en_r,en_v,en_m = r2[:end],v2[:end],mags2[:end]
+		else:
+			excess = gal_num / 5.0
+			end = within[:gal_num + excess + 1][-1]
+			en_r,en_v,en_m = r[rando][:end],v[rando][:end],mags[rando][:end]
+
+		### Build LOS
+		if gal_num < 10:
+			excess = gal_num * 4 / 5.0
+		else:
+			excess = gal_num / 5.0
+		try:
+			end = within[:gal_num + excess + 1][-1]
+			r2,v2,mags2 = self.C.shiftgapper(np.vstack([r[rando][:end],v[rando][:end],mags[rando][:end]]).T).T
+			within = np.where(r2<r_crit200)[0]
+			end = within[:gal_num + 1][-1]
+			richness = len(within)
+		except IndexError:
+			print '****RAISED INDEX ERROR on LOS Building****'
+			richness = 0		
+		# Make sure gal_num richness inside r200
+		j = 0
+		while richness < gal_num:
+			j += 1
+			loop = True
+			while loop == True:				
+				for j in range(3):			
+					rando = npr.randint(0,samp_size,samp_num)
+					within = np.where(r[rando]<=r_crit200)[0]
+					if len(within) >= gal_num + excess:
+						loop = False
+				if len(within) < gal_num + excess:
+					samp_num += 2
+			try:
+				end = within[:gal_num + excess + 1][-1]
+				r2,v2,mags2 = self.C.shiftgapper(np.vstack([r[rando][:end],v[rando][:end],mags[rando][:end]]).T).T
+				within = np.where(r2<r_crit200)[0]
+				end = within[:gal_num + 1][-1]
+				richness = len(within)
+			except IndexError:
+				richness = 0
+
+			if j >= 100:
+				break
+
+		ln_r,ln_v,ln_m = r2[:end],v2[:end],mags2[:end]
+		# Done! Now we have en_r and ln_r arrays (ensemble and line of sight arrays)
+		
+		return en_r,en_v,en_m,ln_r,ln_v,ln_m
+
+	def build_method_2(self,r,v,mags,r_crit200):
+		'''Ordered Set of galaxies with respect to magnitude'''
+		### NOT FINSHED YET !! ###
+		### Build Ensemble 
+		within = np.where(r<r_crit200)[0]
+		excess = gal_num / 5.0
+		end = gal_num + excess
+		if clean_end_los == True:
+			pass		
+
+		end = within[gal_num*line_num + line_num]
+		en_r,en_v,en_mags,en_gpx3d,en_gpy3d,en_gpz3d,en_gvx3d,en_gvy3d,en_gvz3d = r[:end][l::line_num],v[:end][l::line_num],mags[:end][l::line_num],gpx3d[:end][l::line_num],gpy3d[:end][l::line_num],gpz3d[:end][l::line_num],gvx3d[:end][l::line_num],gvy3d[:end][l::line_num],gvz3d[:end][l::line_num]	
+		### Build LOS
+		end = within[:gal_num*line_num + 5*line_num][-1] + 1
+		rt,vt,magst,gpx3dt,gpy3dt,gpz3dt,gvx3dt,gvy3dt,gvz3dt = U.shiftgapper(vstack((r[:end][l::line_num],v[:end][l::line_num],mags[:end][l::line_num],gpx3d[:end][l::line_num],gpy3d[:end][l::line_num],gpz3d[:end][l::line_num],gvx3d[:end][l::line_num],gvy3d[:end][l::line_num],gvz3d[:end][l::line_num])).T).T
+		within = where(rt<r_crit200)[0]
+		end = within[:gal_num][-1] + 1
+		r,v,mags,gpx3d,gpy3d,gpz3d,gvx3d,gvy3d,gvz3d = rt[:end],vt[:end],magst[:end],gpx3dt[:end],gpy3dt[:end],gpz3dt[:end],gvx3dt[:end],gvy3dt[:end],gvz3dt[:end] 
+		###########################
+		return en_r,en_v,en_m,ln_r,ln_v,ln_m
 
 

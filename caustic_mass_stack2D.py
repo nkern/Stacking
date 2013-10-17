@@ -32,6 +32,7 @@ use_flux	= True			# Using Flux if True, using Sophie if False
 write_data 	= True			# Write Data to Result directories if True
 light_cone	= False			# Input RA|DEC projection data if True, if False inputting x,y,z 3D data
 one_ens		= True			# Only solve for one ensemble cluster if true, this is generally the case when using an HPC
+clean_ens	= False			# Do an extra shiftgapper on ensemble before the lines of sight get stacked.
 
 ## CONSTANTS ##
 c 		= 2.99792e5		# speed of light in km/s
@@ -71,7 +72,7 @@ else:
 	write_loc = 'bs_m'+str(method_num)+'_run'+str(run_num)		# Bin Stack data-write location
 
 ## Make dictionary for above constants
-varib = {'c':c,'h':h,'H0':H0,'q':q,'beta':beta,'fbeta':fbeta,'r_limit':r_limit,'v_limit':v_limit,'data_set':data_set,'halo_num':halo_num,'ens_num':ens_num,'gal_num':gal_num,'line_num':line_num,'method_num':method_num,'write_loc':write_loc,'root':root,'self_stack':self_stack,'scale_data':scale_data,'use_flux':use_flux,'write_data':write_data,'light_cone':light_cone,'one_ens':one_ens,'run_time':run_time}
+varib = {'c':c,'h':h,'H0':H0,'q':q,'beta':beta,'fbeta':fbeta,'r_limit':r_limit,'v_limit':v_limit,'data_set':data_set,'halo_num':halo_num,'ens_num':ens_num,'gal_num':gal_num,'line_num':line_num,'method_num':method_num,'write_loc':write_loc,'root':root,'self_stack':self_stack,'scale_data':scale_data,'use_flux':use_flux,'write_data':write_data,'light_cone':light_cone,'one_ens':one_ens,'run_time':run_time,'clean_ens':clean_ens}
 
 ## INITIALIZATION ##
 U = universal(varib)

@@ -185,6 +185,7 @@ class universal:
 	
 		return r,v,mags
 
+
 	def print_varibs(self,varib):
 		print "Start Time		=",time.asctime()
 		print "halo_num		=",varib['halo_num']

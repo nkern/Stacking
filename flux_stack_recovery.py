@@ -132,12 +132,13 @@ def ss_recover():
 	global maLOS_CAUMASS,maLOS_HVD,ens_mfrac,ens_vfrac,los_mfrac,los_vfrac
 
 	# Defined a Masked array for sometimes zero terms
-	maLOS_CAUMASS = ma.masked_array(LOS_CAUMASS,mask=LOS_CAUMASS==0)	# Mask '0' values
-	maLOS_HVD = ma.masked_array(LOS_HVD,mask=LOS_HVD==0)			# Mask '0' values
+	chi = 1.0
+	maLOS_CAUMASS = ma.masked_array(LOS_CAUMASS,mask=LOS_CAUMASS<chi)	# Mask '0' values
+	maLOS_HVD = ma.masked_array(LOS_HVD,mask=LOS_HVD<chi)			# Mask '0' values
 
 	# Ensemble Mass Fraction Arrays after taking logarithm. 
 	ens_mfrac = ma.log(ENS_CAUMASS/M_crit200)
-	ens_vrac = ma.log(ENS_HVD/HVD)
+	ens_vfrac = ma.log(ENS_HVD/HVD)
 
 	# LOS Mass Fraction Arrays
 	array_size = halo_num		# halo_num for horizontal avg first, line_num for vertical avg first. See sites page
