@@ -32,6 +32,9 @@ ______
 
 **flux_stack_recovery.py:**
   
-  This script contains ss_recover() and bs_recover() functions, which correspond to self stack recover and bin stack recover respectively.
+  This script contains classes Recover() and Work().
+  
+  Recover - This class has ss_recover() and bs_recover() functions, which correspond to self stack recover and bin stack recover respectively.
   These functions take the ####.pkl files that were output from caustic_mass_stack2D.py, and 're-loads' them into a working python shell to interactively work with the data.
   
+  Work - This class has different functions for working with the data
