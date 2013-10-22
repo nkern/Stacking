@@ -80,6 +80,7 @@ class selfstack:
 
 		richness = len( np.where(r<r_crit200)[0])
 		print 'Richness Within R200 =',richness
+		print 'Calculated HVD =',derived_hvd
 
 		## Mirror Phase Space Velocity Data if mirror == True
 		mirror = True
@@ -104,14 +105,14 @@ class selfstack:
 			fit = np.polyfit((xbeta*r_crit200)[xbeta<4],abeta[xbeta<4],6)
 			self.beta = fit[0]*self.C.x_range**6+fit[1]*self.C.x_range**5+fit[2]*self.C.x_range**4+fit[3]*self.C.x_range**3+fit[4]*self.C.x_range**2+fit[5]*self.C.x_range+fit[6]	
 		else:				# constant beta w/ radius
-			self.beta = np.zeros(self.C.x_range.size) + self.beta
+			self.beta = np.ones(self.C.x_range.shape)*self.beta
 
 		## Caustic Surface Calculation
 		# This function takes RA, DEC and Z as first input, for now it is empty, all relavent files go to class dictionary
 		self.CS = self.CausticSurface(np.zeros(0),self.C.x_range,self.C.y_range,self.C.img_tot,r200=r_crit200,halo_scale_radius=srad,halo_scale_radius_e=esrad,halo_vdisp=derived_hvd,beta=self.beta)
 
 		## Mass Calculation, leave clus_z blank for now
-		self.MC = self.MassCalc(self.C.x_range,self.CS.vesc_fit,derived_hvd,0,r200=r_crit200,fbr=self.fbeta,H0=self.H0)
+		self.MC = self.MassCalc(self.C.x_range,self.CS.vesc_fit,derived_hvd,0,r200=r_crit200,beta=self.beta,fbr=self.fbeta,H0=self.H0)
 
 		return self.MC.M200,self.CS.Ar_finalD,self.CS.vesc_fit	
 
