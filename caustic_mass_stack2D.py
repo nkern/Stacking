@@ -44,6 +44,7 @@ fbeta		= 0.65			# fbeta value, see 'Diaferio 1999'
 r_limit 	= 1.5			# Radius Cut Scaled by R200
 v_limit		= 3500.0		# Velocity Cut in km/s
 data_set	= 'Guo30_2'		# Data set to draw semi analytic data from
+data_loc	= 'stack_data_2'	# Parent Directory where write_loc directories live
 halo_num	= 100			# Total number of halos loaded
 run_time	= time.asctime()	# Time when program was started
 
@@ -72,7 +73,7 @@ else:
 	write_loc = 'bs_m'+str(method_num)+'_run'+str(run_num)		# Bin Stack data-write location
 
 ## Make dictionary for above constants
-varib = {'c':c,'h':h,'H0':H0,'q':q,'beta':beta,'fbeta':fbeta,'r_limit':r_limit,'v_limit':v_limit,'data_set':data_set,'halo_num':halo_num,'ens_num':ens_num,'gal_num':gal_num,'line_num':line_num,'method_num':method_num,'write_loc':write_loc,'root':root,'self_stack':self_stack,'scale_data':scale_data,'use_flux':use_flux,'write_data':write_data,'light_cone':light_cone,'one_ens':one_ens,'run_time':run_time,'clean_ens':clean_ens}
+varib = {'c':c,'h':h,'H0':H0,'q':q,'beta':beta,'fbeta':fbeta,'r_limit':r_limit,'v_limit':v_limit,'data_set':data_set,'halo_num':halo_num,'ens_num':ens_num,'gal_num':gal_num,'line_num':line_num,'method_num':method_num,'write_loc':write_loc,'data_loc':data_loc,'root':root,'self_stack':self_stack,'scale_data':scale_data,'use_flux':use_flux,'write_data':write_data,'light_cone':light_cone,'one_ens':one_ens,'run_time':run_time,'clean_ens':clean_ens}
 
 ## INITIALIZATION ##
 U = universal(varib)
@@ -106,7 +107,7 @@ for k in np.array([ens_num]):
 	if self_stack:
 		stack_data = SS.self_stack_clusters(HaloID,HaloData,Halo_P,Halo_V,Gal_P,Gal_V,Gal_Mags,k)
 		# unpack data
-		ens_r,ens_v,ens_m,ens_hvd,ens_caumass,ens_causurf,ens_nfwsurf,los_r,los_v,los_m,los_hvd,los_caumass,los_causurf,los_nfwsurf,x_range = stack_data
+		ens_r,ens_v,ens_gmags,ens_rmags,ens_imags,ens_hvd,ens_caumass,ens_caumass_est,ens_causurf,ens_nfwsurf,los_r,los_v,los_gmags,los_rmags,los_imags,los_hvd,los_caumass,los_caumass_est,los_causurf,los_nfwsurf,x_range,sample_size,pro_pos = stack_data
 
 	else:
 		BS.bin_stack_clusters()
@@ -114,11 +115,9 @@ for k in np.array([ens_num]):
 	j += 1
 
 
-
-
 ### Save Data into Pickle Files ###
 if write_data == True:
-	pkl_file = open(root+'/nkern/Stacking/stack_data/'+write_loc+'/Ensemble_'+str(ens_num)+'_Data.pkl','wb')
+	pkl_file = open(root+'/nkern/Stacking/'+data_loc+'/'+write_loc+'/Ensemble_'+str(ens_num)+'_Data.pkl','wb')
 	output = pkl.Pickler(pkl_file)
 	output.dump(stack_data)
 	output.dump(varib)

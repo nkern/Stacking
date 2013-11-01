@@ -9,13 +9,16 @@ import numpy as np
 import matplotlib.pyplot as mp
 import numpy.ma as ma
 import astStats
+from mpl_toolkits.mplot3d import Axes3D
 import sys
 from AttrDict import AttrDict
+import os.path
 
 ## Flags ##
 use_flux	= True			# Running on flux or sophie?
 get_los		= True			# Upload Line of Sight Data as well?
-write_loc	= 'ss_m1_run1'		# Which directory within /stack_data/ to upload data from
+data_loc	= 'stack_data_2'	# Parent directory where write_loc lives
+write_loc	= 'ss_m1_run1'		# Which directory within data_loc to load ensembles from?
 
 if use_flux == True:
 	root = str('/nfs/christoq_ls')
@@ -44,35 +47,44 @@ class Recover():
 		# Make wanted variables global
 
 		# Create them as lists
-		ENS_CAUMASS,ENS_CAUSURF,ENS_NFWSURF,LOS_CAUMASS,LOS_CAUSURF,LOS_NFWSURF = [],[],[],[],[],[]
-		ENS_R,ENS_V,ENS_M,LOS_R,LOS_V,LOS_M,ENS_HVD,LOS_HVD = [],[],[],[],[],[],[],[]
+		ENS_CAUMASS,ENS_CAUMASS_EST,ENS_CAUSURF,ENS_NFWSURF,LOS_CAUMASS,LOS_CAUMASS_EST,LOS_CAUSURF,LOS_NFWSURF = [],[],[],[],[],[],[],[]
+		ENS_R,ENS_V,ENS_GMAGS,ENS_RMAGS,ENS_IMAGS,LOS_R,LOS_V,LOS_GMAGS,LOS_RMAGS,LOS_IMAGS,ENS_HVD,LOS_HVD = [],[],[],[],[],[],[],[],[],[],[],[]
+		SAMS,PRO_POS = [],[]
 
 		# Initialization step 
-		pkl_file = open(root+'/nkern/Stacking/stack_data/'+write_loc+'/Ensemble_'+str(0)+'_Data.pkl','rb')
+		pkl_file = open(root+'/nkern/Stacking/'+data_loc+'/'+write_loc+'/Ensemble_'+str(0)+'_Data.pkl','rb')
 		input = pkl.Unpickler(pkl_file)
 
 		stack_data 						= input.load()
 		varib							= input.load()
 		HaloID,Halo_P,Halo_V,Gal_P,Gal_V,Gal_Mags,HaloData	= input.load()
 
-		ens_r,ens_v,ens_m,ens_hvd,ens_caumass,ens_causurf,ens_nfwsurf,los_r,los_v,los_m,los_hvd,los_caumass,los_causurf,los_nfwsurf,x_range = stack_data
+		ens_r,ens_v,ens_gmags,ens_rmags,ens_imags,ens_hvd,ens_caumass,ens_caumass_est,ens_causurf,ens_nfwsurf,los_r,los_v,los_gmags,los_rmags,los_imags,los_hvd,los_caumass,los_caumass_est,los_causurf,los_nfwsurf,x_range,sample_size,pro_pos = stack_data
 		M_crit200,R_crit200,Z,SRAD,ESRAD,HVD = HaloData	
 
 		# Append stack_data to major lists
 		ENS_R.append(ens_r)
 		ENS_V.append(ens_v)
-		ENS_M.append(ens_m)
+		ENS_GMAGS.append(ens_gmags)
+		ENS_RMAGS.append(ens_rmags)
+		ENS_IMAGS.append(ens_imags)
 		ENS_HVD.append(float(ens_hvd))
 		ENS_CAUMASS.append(float(ens_caumass))
+		ENS_CAUMASS_EST.append(float(ens_caumass_est))
 		ENS_CAUSURF.append(ens_causurf)
 		ENS_NFWSURF.append(ens_nfwsurf)
 		LOS_R.append(los_r)
 		LOS_V.append(los_v)
-		LOS_M.append(los_m)
+		LOS_GMAGS.append(los_gmags)
+		LOS_RMAGS.append(los_rmags)
+		LOS_IMAGS.append(los_imags)
 		LOS_HVD.append(los_hvd)
 		LOS_CAUMASS.append(los_caumass)
+		LOS_CAUMASS_EST.append(los_caumass_est)
 		LOS_CAUSURF.append(los_causurf)
 		LOS_NFWSURF.append(los_nfwsurf)
+		SAMS.append(sample_size)
+		PRO_POS.append(pro_pos)
 
 		# Loop over ensembles
 		j = 0
@@ -82,47 +94,62 @@ class Recover():
 			sys.stdout.flush()
 			j += 1
 
-			pkl_file = open(root+'/nkern/Stacking/stack_data/'+write_loc+'/Ensemble_'+str(i)+'_Data.pkl','rb')
+			pkl_file = open(root+'/nkern/Stacking/'+data_loc+'/'+write_loc+'/Ensemble_'+str(i)+'_Data.pkl','rb')
 			input = pkl.Unpickler(pkl_file)
 
 			stack_data = input.load()
 
-			ens_r,ens_v,ens_m,ens_hvd,ens_caumass,ens_causurf,ens_nfwsurf,los_r,los_v,los_m,los_hvd,los_caumass,los_causurf,los_nfwsurf,x_range = stack_data
-
+			ens_r,ens_v,ens_gmags,ens_rmags,ens_imags,ens_hvd,ens_caumass,ens_caumass_est,ens_causurf,ens_nfwsurf,los_r,los_v,los_gmags,los_rmags,los_imags,los_hvd,los_caumass,los_caumass_est,los_causurf,los_nfwsurf,x_range,sample_size,pro_pos = stack_data
 
 			# Append stack_data to major lists
 			ENS_R.append(ens_r)
 			ENS_V.append(ens_v)
-			ENS_M.append(ens_m)
+			ENS_GMAGS.append(ens_gmags)
+			ENS_RMAGS.append(ens_rmags)
+			ENS_IMAGS.append(ens_imags)
 			ENS_HVD.append(float(ens_hvd))
 			ENS_CAUMASS.append(float(ens_caumass))
+			ENS_CAUMASS_EST.append(float(ens_caumass_est))
 			ENS_CAUSURF.append(ens_causurf)
 			ENS_NFWSURF.append(ens_nfwsurf)
 			LOS_R.append(los_r)
 			LOS_V.append(los_v)
-			LOS_M.append(los_m)
+			LOS_GMAGS.append(los_gmags)
+			LOS_RMAGS.append(los_rmags)
+			LOS_IMAGS.append(los_imags)
 			LOS_HVD.append(los_hvd)
 			LOS_CAUMASS.append(los_caumass)
+			LOS_CAUMASS_EST.append(los_caumass_est)
 			LOS_CAUSURF.append(los_causurf)
 			LOS_NFWSURF.append(los_nfwsurf)
-		
+			SAMS.append(sample_size)
+			PRO_POS.append(pro_pos)
+
 		print ''
 
 		# Convert to arrays
 		ENS_R = np.array(ENS_R)
 		ENS_V = np.array(ENS_V)
-		ENS_M = np.array(ENS_M)
+		ENS_GMAGS = np.array(ENS_GMAGS)
+		ENS_RMAGS = np.array(ENS_RMAGS)
+		ENS_IMAGS = np.array(ENS_IMAGS)
 		ENS_HVD = np.array(ENS_HVD)
 		ENS_CAUMASS = np.array(ENS_CAUMASS)
+		ENS_CAUMASS_EST = np.array(ENS_CAUMASS_EST)
 		ENS_CAUSURF = np.array(ENS_CAUSURF)
 		ENS_NFWSURF = np.array(ENS_NFWSURF)
 		LOS_R = np.array(LOS_R)
 		LOS_V = np.array(LOS_V)
-		LOS_M = np.array(LOS_M)
+		LOS_GMAGS = np.array(LOS_GMAGS)
+		LOS_RMAGS = np.array(LOS_RMAGS)
+		LOS_IMAGS = np.array(LOS_IMAGS)
 		LOS_HVD = np.array(LOS_HVD)
 		LOS_CAUMASS = np.array(LOS_CAUMASS)
+		LOS_CAUMASS_EST = np.array(LOS_CAUMASS_EST)
 		LOS_CAUSURF = np.array(LOS_CAUSURF)
 		LOS_NFWSURF = np.array(LOS_NFWSURF)
+		SAMS = np.array(SAMS)
+		PRO_POS = np.array(PRO_POS)
 
 		#Update global namespace with varib attributes
 		globals().update(varib)
@@ -131,12 +158,21 @@ class Recover():
 
 		# Defined a Masked array for sometimes zero terms
 		epsilon = 1.0
-		maLOS_CAUMASS = ma.masked_array(LOS_CAUMASS,mask=LOS_CAUMASS<epsilon)	# Mask '0' values
-		maLOS_HVD = ma.masked_array(LOS_HVD,mask=LOS_HVD<epsilon)		# Mask '0' values
-
+		use_est = False				# Use MassCalc estimated r200 mass values if true 
+		if use_est == False:
+			maLOS_CAUMASS = ma.masked_array(LOS_CAUMASS,mask=LOS_CAUMASS<epsilon)	# Mask '0' values
+			maLOS_HVD = ma.masked_array(LOS_HVD,mask=LOS_HVD<epsilon)		# Mask '0' values
+		else:
+			maLOS_CAUMASS = ma.masked_array(LOS_CAUMASS_EST,mask=LOS_CAUMASS_EST<epsilon)	# Mask '0' values
+			maLOS_HVD = ma.masked_array(LOS_HVD,mask=LOS_HVD<epsilon)		# Mask '0' values
+	
 		# Ensemble Mass Fraction Arrays after taking logarithm. 
-		ens_mfrac = ma.log(ENS_CAUMASS/M_crit200)
-		ens_vfrac = ma.log(ENS_HVD/HVD)
+		if use_est == False:
+			ens_mfrac = ma.log(ENS_CAUMASS/M_crit200)
+			ens_vfrac = ma.log(ENS_HVD/HVD)
+		else:
+			ens_mfrac = ma.log(ENS_CAUMASS_EST/M_crit200)
+			ens_vfrac = ma.log(ENS_HVD/HVD)
 
 		# LOS Mass Fraction Arrays
 		array_size = halo_num		# halo_num for horizontal avg first, line_num for vertical avg first. See sites page
@@ -159,8 +195,8 @@ class Recover():
 		avgLOS_CAUMASS = np.array(map(np.median,maLOS_CAUMASS))
 
 		# Return to Namespaces depending on go_global
-		names = ['varib','HaloID','Halo_P','Halo_V','Gal_P','Gal_V','Gal_Mags','M_crit200','R_crit200','Z','SRAD','ESRAD','HVD','x_range','ENS_CAUMASS','ENS_CAUSURF','ENS_NFWSURF','LOS_CAUMASS','LOS_CAUSURF','LOS_NFWSURF','ENS_R','ENS_V','ENS_M','LOS_R','LOS_V','LOS_M','ENS_HVD','LOS_HVD','ens_r','ens_caumass','los_r','los_caumass','ens_mbias','ens_mscat','los_mbias','los_mscat','ens_vbias','ens_vscat','los_vbias','los_vscat','maLOS_CAUMASS','maLOS_HVD','avgLOS_CAUMASS','ens_mfrac','ens_vfrac','los_mfrac','los_vfrac']
-		data = [varib,HaloID,Halo_P,Halo_V,Gal_P,Gal_V,Gal_Mags,M_crit200,R_crit200,Z,SRAD,ESRAD,HVD,x_range,ENS_CAUMASS,ENS_CAUSURF,ENS_NFWSURF,LOS_CAUMASS,LOS_CAUSURF,LOS_NFWSURF,ENS_R,ENS_V,ENS_M,LOS_R,LOS_V,LOS_M,ENS_HVD,LOS_HVD,ens_r,ens_caumass,los_r,los_caumass,ens_mbias,ens_mscat,los_mbias,los_mscat,ens_vbias,ens_vscat,los_vbias,los_vscat,maLOS_CAUMASS,maLOS_HVD,avgLOS_CAUMASS,ens_mfrac,ens_vfrac,los_mfrac,los_vfrac]
+		names = ['varib','HaloID','Halo_P','Halo_V','Gal_P','Gal_V','Gal_Mags','M_crit200','R_crit200','Z','SRAD','ESRAD','HVD','x_range','ENS_CAUMASS','ENS_CAUMASS_EST','ENS_CAUSURF','ENS_NFWSURF','LOS_CAUMASS','LOS_CAUMASS_EST','LOS_CAUSURF','LOS_NFWSURF','ENS_R','ENS_V','ENS_GMAGS','ENS_RMAGS','ENS_IMAGS','LOS_R','LOS_V','LOS_GMAGS','LOS_RMAGS','LOS_IMAGS','ENS_HVD','LOS_HVD','SAMS','PRO_POS','ens_mbias','ens_mscat','los_mbias','los_mscat','ens_vbias','ens_vscat','los_vbias','los_vscat','maLOS_CAUMASS','maLOS_HVD','avgLOS_CAUMASS','ens_mfrac','ens_vfrac','los_mfrac','los_vfrac']
+		data = [varib,HaloID,Halo_P,Halo_V,Gal_P,Gal_V,Gal_Mags,M_crit200,R_crit200,Z,SRAD,ESRAD,HVD,x_range,ENS_CAUMASS,ENS_CAUMASS_EST,ENS_CAUSURF,ENS_NFWSURF,LOS_CAUMASS,LOS_CAUMASS_EST,LOS_CAUSURF,LOS_NFWSURF,ENS_R,ENS_V,ENS_GMAGS,ENS_RMAGS,ENS_IMAGS,LOS_R,LOS_V,LOS_GMAGS,LOS_RMAGS,LOS_IMAGS,ENS_HVD,LOS_HVD,SAMS,PRO_POS,ens_mbias,ens_mscat,los_mbias,los_mscat,ens_vbias,ens_vscat,los_vbias,los_vscat,maLOS_CAUMASS,maLOS_HVD,avgLOS_CAUMASS,ens_mfrac,ens_vfrac,los_mfrac,los_vfrac]
 		mydict = dict( zip(names,data) )
 		if go_global == True:
 			globals().update(mydict)
@@ -180,7 +216,7 @@ class Work(Recover):
 	def __init__(self,Recover):
 		pass	
 
-	def statistic_all(self,iter_array=None):
+	def load_all(self,iter_array=None,tab_shape=None):
 		'''
 		This iterates over different richness geometry configurations and runs statistics on data.
 		It is recommended to do any calculations (statistics, plots etc.) within the for loop, and
@@ -190,10 +226,11 @@ class Work(Recover):
 		# Configure Variables
 		if iter_array == None:
 			iter_array = np.arange(1,21)
+			tab_shape = (4,5)
 
 		# Define globals
 		global ENS_MBIAS,ENS_MSCAT,ENS_VBIAS,ENS_VSCAT,LOS_MBIAS,LOS_MSCAT,LOS_VBIAS,LOS_VSCAT
-		global RUN_NUM,GAL_NUM,LINE_NUM
+		global RUN_NUM,GAL_NUM,LINE_NUM,RICH_NUM
 
 		# Create arrays
 		ENS_MBIAS,ENS_MSCAT,ENS_VBIAS,ENS_VSCAT = [],[],[],[]
@@ -224,6 +261,22 @@ class Work(Recover):
 			
 			del mydict,d
 
+		# Make into arrays that resemble table
+		try:
+			print 'Table Shape =',tab_shape
+		except:
+			print 'Table Shape not defined'
+			tab_shape = input('Enter table shape as a tuple, (rows,columns) : ')
+			
+
+		ENS_MBIAS,ENS_MSCAT,ENS_VBIAS,ENS_VSCAT = np.array(ENS_MBIAS).reshape(tab_shape),np.array(ENS_MSCAT).reshape(tab_shape),np.array(ENS_VBIAS).reshape(tab_shape),np.array(ENS_VSCAT).reshape(tab_shape)
+		LOS_MBIAS,LOS_MSCAT,LOS_VBIAS,LOS_VSCAT = np.array(LOS_MBIAS).reshape(tab_shape),np.array(LOS_MSCAT).reshape(tab_shape),np.array(LOS_VBIAS).reshape(tab_shape),np.array(LOS_VSCAT).reshape(tab_shape)
+		RUN_NUM,GAL_NUM,LINE_NUM = np.array(RUN_NUM).reshape(tab_shape),np.array(GAL_NUM).reshape(tab_shape),np.array(LINE_NUM).reshape(tab_shape) 
+
+		# Other Data Arrays
+		RICH_NUM = GAL_NUM*LINE_NUM
+
+		return
 
 	def oto(self,xarray,yarray,style='o',alpha=None):
 		'''Simple log log one to one plot setup'''
@@ -232,6 +285,28 @@ class Work(Recover):
 		mp.xscale('log')
 		mp.yscale('log')
 		return p1
+
+	def write_csv(self,data,horz_header,vert_header,filename,overwrite=False):
+		''' 
+		This function writes 2D array (already in table shape) data to a csv file
+		The horz_header is the 1D line_num array, vert_header is the 1D gal_num array
+		'''
+		# Make sure not overwriting
+		if overwrite != True and os.path.isfile(filename) == True:
+			print 'File exists and overwrite = False'
+			return	
+		# Prep data array w/ headers
+		shape = data.shape
+		data2 = list(horz_header) + list(data.ravel())
+		f = open(filename,'w')
+		f.write('# '+filename+'\n'+'# '+header+'\n')
+		for i in range(shape[0]):
+			pass	
+
+
+
+	
+
 
 
 ## Initialize Classes

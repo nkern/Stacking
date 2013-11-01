@@ -31,35 +31,6 @@ class selfstack:
 		self.CausticSurface = CausticSurface
 		self.MassCalc = MassCalc
 
-	
-	def build_ensemble(self,r,v,mags,halodata,l):
-		''' 
-		- This function selects specific galaxies per line of sight using a sepcified method of stacking
-		- The current method of interloper treatment is using CausticMass.py's ShiftGapper technique
-		- Certain Measures were taken when using the ShiftGapper to ensure gal_num galaxies within r200
-		- Interloper treatment is always done for the LOS, and can be done for ensemble_los if desired
-		'''
-		##
-		gal_num = self.gal_num	
-	
-		## Program
-		# Unpack halodata array into local namespace
-		m_crit200,r_crit200,z,srad,esrad,hvd = halodata	
-		# Sort galaxies by Magnitude
-		bright = np.argsort(mags)
-		r,v,mags = r[bright],v[bright],mags[bright]
-
-		if self.method_num == 0:
-			en_r,en_v,en_m,ln_r,ln_v,ln_m = self.build_method_0(r,v,mags,r_crit200)
-
-		elif self.method_num == 1:
-			en_r,en_v,en_m,ln_r,ln_v,ln_m = self.build_method_1(r,v,mags,r_crit200)
-		
-		elif self.method_num == 2:
-			en_r,en_v,en_m,ln_r,ln_v,ln_m = self.build_method_2(r,v,mags,r_crit200)
-
-		return en_r,en_v,en_m,ln_r,ln_v,ln_m
-
 
 	def kernel_caustic_masscalc(self,r,v,halodata,derived_hvd,k,l=None):
 		'''
@@ -114,7 +85,7 @@ class selfstack:
 		## Mass Calculation, leave clus_z blank for now
 		self.MC = self.MassCalc(self.C.x_range,self.CS.vesc_fit,derived_hvd,0,r200=r_crit200,beta=self.beta,fbr=self.fbeta,H0=self.H0)
 
-		return self.MC.M200,self.CS.Ar_finalD,self.CS.vesc_fit	
+		return self.MC.M200,self.MC.M200_est,self.CS.Ar_finalD,self.CS.vesc_fit	
 
 
 
@@ -122,14 +93,15 @@ class selfstack:
 		''' Building Ensemble Cluster and Calculating Property Statistics '''
 		## Unpack HaloData array 
 		M_crit200,R_crit200,Z,SRAD,ESRAD,HVD = HaloData
-
+		G_Mags,R_Mags,I_Mags = Gal_Mags[0],Gal_Mags[1],Gal_Mags[2]
 		## Define Arrays for Building Ensemble and LOS
 		# Ensemble Arrays:	[Successive Ensemble Number][Data]
 		# Line of Sight Arrays:	[Line Of Sight][Data]
-		ens_r, ens_v, ens_m, ens_hvd = [], [], [], []
-		ens_caumass, ens_causurf, ens_nfwsurf = [], [], []
-		los_r, los_v, los_m, los_hvd = [], [], [], []
-		los_caumass, los_causurf, los_nfwsurf = [], [], []
+		ens_r,ens_v,ens_gmags,ens_rmags,ens_imags,ens_hvd = [],[],[],[],[],[]
+		ens_caumass, ens_caumass_est, ens_causurf, ens_nfwsurf = [], [], [], []
+		los_r,los_v,los_gmags,los_rmags,los_imags,los_hvd = [],[],[],[],[],[]
+		los_caumass, los_caumass_est, los_causurf, los_nfwsurf = [], [], [], []
+		sample_size,pro_pos = [],[]
 
 		## Loop over lines of sight
 		for l in range(self.line_num):
@@ -138,18 +110,20 @@ class selfstack:
 				pass
 			else:
 				# Line of Sight Calculation for naturally 3D data
-				r, v = self.U.line_of_sight(Gal_P[k],Gal_V[k],Halo_P[k],Halo_V[k])
+				r, v, projected_pos = self.U.line_of_sight(Gal_P[k],Gal_V[k],Halo_P[k],Halo_V[k])
 
 			# Limit Data in Phase Space
-			r, v, mags = self.U.limit_gals(r,v,Gal_Mags[k],R_crit200[k],HVD[k])					
+			r,v,gmags,rmags,imags,samp_size = self.U.limit_gals(r,v,G_Mags[k],R_Mags[k],I_Mags[k],R_crit200[k],HVD[k])					
 			
 			# Build LOS and Ensemble, with given method of stacking
-			en_r,en_v,en_m,ln_r,ln_v,ln_m = self.build_ensemble(r,v,mags,HaloData.T[k],l)	
+			en_r,en_v,en_gmags,en_rmags,en_imags,ln_r,ln_v,ln_gmags,ln_rmags,ln_imags = self.build_ensemble(r,v,gmags,rmags,imags,HaloData.T[k],l)	
 
 			# Build Ensemble Arrays
 			ens_r.extend(en_r)
 			ens_v.extend(en_v)
-			ens_m.extend(en_m)
+			ens_gmags.extend(en_gmags)
+			ens_rmags.extend(en_rmags)
+			ens_imags.extend(en_imags)
 			
 			# Calculate LOS HVD (this is after shiftgapper)
 			ln_within = np.where(ln_r<R_crit200[k])[0]
@@ -163,49 +137,89 @@ class selfstack:
 				ln_hvd = astStats.biweightScale(np.copy(ln_v)[ln_within],9.0)
 
 			# Run Caustic Technique for LOS mass estimation
-			ln_caumass,ln_causurf,ln_nfwsurf = self.kernel_caustic_masscalc(ln_r,ln_v,HaloData.T[k],ln_hvd,k,l)
+			ln_caumass,ln_caumass_est,ln_causurf,ln_nfwsurf = self.kernel_caustic_masscalc(ln_r,ln_v,HaloData.T[k],ln_hvd,k,l)
 			
 			# Append LOS Data Arrays
 			los_r.append(ln_r)
 			los_v.append(ln_v)
-			los_m.append(ln_m)
+			los_gmags.append(ln_gmags)
+			los_rmags.append(ln_rmags)
+			los_imags.append(ln_imags)
 			los_hvd.append(ln_hvd)
 			los_caumass.append(ln_caumass)
+			los_caumass_est.append(ln_caumass_est)
 			los_causurf.append(ln_causurf)
 			los_nfwsurf.append(ln_nfwsurf)
+			sample_size.append(samp_size)
+			pro_pos.append(projected_pos)
 
 		# Shiftgapper for Ensemble Interloper treatment
-		ens_r,ens_v,ens_m = self.C.shiftgapper(np.vstack([ens_r,ens_v,ens_m]).T).T
+		ens_r,ens_v,ens_gmags,ens_rmags,ens_imags = self.C.shiftgapper(np.vstack([ens_r,ens_v,ens_gmags,ens_rmags,ens_imags]).T).T
 
 		# Reduce system to gal_num richness within r200
 		within = np.where(ens_r <= R_crit200[k])[0]
 		end = within[:self.gal_num*self.line_num + 1][-1]
 		ens_r = ens_r[:end]
 		ens_v = ens_v[:end]
-		ens_m = ens_m[:end]
+		ens_gmags = ens_gmags[:end]
+		ens_rmags = ens_rmags[:end]
+		ens_imags = ens_imags[:end]
 
 		# Calculate HVD
 		en_hvd = astStats.biweightScale(np.copy(ens_v)[np.where(ens_r<=R_crit200[k])],9.0)
 
 		# Caustic Technique for Ensemble
-		en_caumass,en_causurf,en_nfwsurf = self.kernel_caustic_masscalc(ens_r,ens_v,HaloData.T[k],en_hvd,k)
+		en_caumass,en_caumass_est,en_causurf,en_nfwsurf = self.kernel_caustic_masscalc(ens_r,ens_v,HaloData.T[k],en_hvd,k)
 
 		# Append Ensemble Data Arrays
 		ens_hvd.append(en_hvd)
 		ens_caumass.append(en_caumass)
+		ens_caumass_est.append(en_caumass_est)
 
 		# Turn into numpy arrays
-		ens_r,ens_v,ens_m = np.array(ens_r),np.array(ens_v),np.array(ens_m)
-		ens_hvd,ens_caumass = np.array(ens_hvd),np.array(ens_caumass)
+		ens_r,ens_v,ens_gmags,ens_rmags,ens_imags = np.array(ens_r),np.array(ens_v),np.array(ens_gmags),np.array(ens_rmags),np.array(ens_imags)
+		ens_hvd,ens_caumass,ens_caumass_est = np.array(ens_hvd),np.array(ens_caumass),np.array(ens_caumass_est)
 		ens_causurf,ens_nfwsurf = np.array(en_causurf),np.array(en_nfwsurf)
-		los_r,los_v,losm = np.array(los_r),np.array(los_v),np.array(los_m)
-		los_hvd,los_caumass = np.array(los_hvd),np.array(los_caumass)
+		los_r,los_v,los_gmags,los_rmags,los_imags = np.array(los_r),np.array(los_v),np.array(los_gmags),np.array(los_rmags),np.array(los_imags)
+		los_hvd,los_caumass,los_caumass_est = np.array(los_hvd),np.array(los_caumass),np.array(los_caumass_est)
 		los_causurf,los_nfwsurf = np.array(los_causurf),np.array(los_nfwsurf)
+		sample_size,pro_pos = np.array(sample_size),np.array(pro_pos)
 
-		return ens_r,ens_v,ens_m,ens_hvd,ens_caumass,ens_causurf,ens_nfwsurf,los_r,los_v,los_m,los_hvd,los_caumass,los_causurf,los_nfwsurf,self.C.x_range	
+		return ens_r,ens_v,ens_gmags,ens_rmags,ens_imags,ens_hvd,ens_caumass,ens_caumass_est,ens_causurf,ens_nfwsurf,los_r,los_v,los_gmags,los_rmags,los_imags,los_hvd,los_caumass,los_caumass_est,los_causurf,los_nfwsurf,self.C.x_range,sample_size,pro_pos	
 
 
-	def build_method_0(self,r,v,mags,r_crit200):
+	def build_ensemble(self,r,v,gmags,rmags,imags,halodata,l):
+		''' 
+		- This function selects specific galaxies per line of sight using a sepcified method of stacking
+		- The current method of interloper treatment is using CausticMass.py's ShiftGapper technique
+		- Certain Measures were taken when using the ShiftGapper to ensure gal_num galaxies within r200
+		- Interloper treatment is always done for the LOS, and can be done for ensemble_los if desired
+		'''
+		##
+		gal_num = self.gal_num	
+	
+		## Program
+		# Unpack halodata array into local namespace
+		m_crit200,r_crit200,z,srad,esrad,hvd = halodata	
+		# Sort galaxies by r Magnitude
+		bright = np.argsort(rmags)
+		r,v,gmags,rmags,imags = r[bright],v[bright],gmags[bright],rmags[bright],imags[bright]
+
+		if self.method_num == 0:
+			en_r,en_v,en_gmags,en_rmags,en_imags,ln_r,ln_v,ln_gmags,ln_rmags,ln_imags = self.build_method_0(r,v,gmags,rmags,imags,r_crit200)
+
+		elif self.method_num == 1:
+			en_r,en_v,en_gmags,en_rmags,en_imags,ln_r,ln_v,ln_gmags,ln_rmags,ln_imags,samp_size = self.build_method_1(r,v,gmags,rmags,imags,r_crit200)
+		
+		elif self.method_num == 2:
+			en_r,en_v,en_m,ln_r,ln_v,ln_m = self.build_method_2(r,v,mags,r_crit200)
+
+
+		return en_r,en_v,en_gmags,en_rmags,en_imags,ln_r,ln_v,ln_gmags,ln_rmags,ln_imags
+
+
+
+	def build_method_0(self,r,v,gmags,rmags,imags,r_crit200):
 		'''Picking top brightest galaxies, such that there are gal_num galaxies within r200'''
 		gal_num = self.gal_num
 
@@ -221,33 +235,34 @@ class selfstack:
 		if self.clean_ens == True:
 			excess *= 2.0				# make excess a bit larger than previously defined
 			end = within[:gal_num + excess + 1][-1]
-			r2,v2,mags2 = self.C.shiftgapper(np.vstack([r[:end],v[:end],mags[:end]]).T).T # Shiftgapper inputs and outputs data as transpose...
+			r2,v2,gmags2,rmags2,imags2 = self.C.shiftgapper(np.vstack([r[:end],v[:end],gmags[:end],rmags[:end],imags[:end]]).T).T # Shiftgapper inputs and outputs data as transpose...
 			within = np.where(r2<r_crit200)[0]	# re-calculate within array with new sample
 			excess = gal_num / 5.0
 			end = within[:gal_num + excess + 1][-1]
 			# Append to ensemble array
-			en_r,en_v,en_m = r2[:end],v2[:end],mags2[:end]
+			en_r,en_v,en_gmags,en_rmags,en_imags = r2[:end],v2[:end],gmags2[:end],rmags2[:end],imags2[:end]
 		else:
-			en_r,en_v,en_m = r[0:end],v[0:end],mags[0:end]
+			en_r,en_v,en_gmags,en_rmags,en_imags = r[0:end],v[0:end],gmags[0:end],rmags[0:end],imags[0:end]
 		# Build Line of Sight (ln => line of sight)
 		# shiftgapper on line of sight
-		r2,v2,mags2 = self.C.shiftgapper(np.vstack([r[:end],v[:end],mags[:end]]).T).T
+		r2,v2,gmags2,rmags2,imags2 = self.C.shiftgapper(np.vstack([r[:end],v[:end],gmags[:end],rmags[:end],imags[:end]]).T).T
 		within = np.where(r2<r_crit200)[0]		# re-calculate within array with new sample
 		# Now feed ln arrays correct gal_num richness within r200
 		end = within[:gal_num + 1][-1]
-		ln_r,ln_v,ln_m = r2[:end],v2[:end],mags2[:end]	
+		ln_r,ln_v,ln_gmags,ln_rmags,ln_imags = r2[:end],v2[:end],gmags2[:end],rmags2[:end],imags2[:end]	
 		# Done! Now we have en_r and ln_r arrays, which will either be stacked (former) or put straight into Caustic technique (latter)
-		return en_r,en_v,en_m,ln_r,ln_v,ln_m
+		return en_r,en_v,en_gmags,en_rmags,en_imags,ln_r,ln_v,ln_gmags,ln_rmags,ln_imags
 
-	def build_method_1(self,r,v,mags,r_crit200):
+
+	def build_method_1(self,r,v,gmags,rmags,imags,r_crit200):
 		'''Randomly choosing bright galaxies until gal_num galaxies are within r200'''
 		gal_num = self.gal_num
 
 		# reduce size of sample to something reasonable within magnitude limits
 		sample = gal_num * 25				# arbitrary coefficient, see sites page post Apr 24th, 2013 for more info
-		r,v,mags = r[:sample],v[:sample],mags[:sample]
+		r,v,gmags,rmags,imags = r[:sample],v[:sample],gmags[:sample],rmags[:sample],imags[:sample]
 		samp_size = len(r)				# actual size of sample (might be less than gal_num*25)
-
+		self.samp_size = samp_size
 		# create random numbered array for galaxy selection
 		if gal_num < 10:				# when gal_num < 10, has trouble hitting gal_num richness inside r200
 			excess = gal_num * 4.0 / 5.0
@@ -267,16 +282,16 @@ class selfstack:
 		### Build Ensemble
 		if self.clean_ens == True:
 
-			r2,v2,mags2 = self.C.shiftgapper(np.vstack([r[rando],v[rando],mags[rando]]).T).T
+			r2,v2,gmags2,rmags2,imags2 = self.C.shiftgapper(np.vstack([r[rando],v[rando],gmags[rando],rmags[rand],imags[rando]]).T).T
 			within = np.where(r2<r_crit200)[0]
 			excess = gal_num / 5.0
 			end = within[:gal_num + excess + 1][-1]
 			# Append to ensemble array
-			en_r,en_v,en_m = r2[:end],v2[:end],mags2[:end]
+			en_r,en_v,en_gmags,en_rmags,en_imags = r2[:end],v2[:end],gmags2[:end],rmags2[:end],imags2[:end]
 		else:
 			excess = gal_num / 5.0
 			end = within[:gal_num + excess + 1][-1]
-			en_r,en_v,en_m = r[rando][:end],v[rando][:end],mags[rando][:end]
+			en_r,en_v,en_gmags,en_rmags,en_imags = r[rando][:end],v[rando][:end],gmags[rando][:end],rmags[rando][:end],imags[rando][:end]
 
 		### Build LOS
 		if gal_num < 10:
@@ -285,7 +300,7 @@ class selfstack:
 			excess = gal_num / 5.0
 		try:
 			end = within[:gal_num + excess + 1][-1]
-			r2,v2,mags2 = self.C.shiftgapper(np.vstack([r[rando][:end],v[rando][:end],mags[rando][:end]]).T).T
+			r2,v2,gmags2,rmags2,imags2 = self.C.shiftgapper(np.vstack([r[rando][:end],v[rando][:end],gmags[rando][:end],rmags[rando][:end],imags[rando][:end]]).T).T
 			within = np.where(r2<r_crit200)[0]
 			end = within[:gal_num + 1][-1]
 			richness = len(within)
@@ -307,7 +322,7 @@ class selfstack:
 					samp_num += 2
 			try:
 				end = within[:gal_num + excess + 1][-1]
-				r2,v2,mags2 = self.C.shiftgapper(np.vstack([r[rando][:end],v[rando][:end],mags[rando][:end]]).T).T
+				r2,v2,gmags2,rmags2,imags2 = self.C.shiftgapper(np.vstack([r[rando][:end],v[rando][:end],gmags[rando][:end],rmags[rando][:end],imags[rando][:end]]).T).T
 				within = np.where(r2<r_crit200)[0]
 				end = within[:gal_num + 1][-1]
 				richness = len(within)
@@ -317,10 +332,10 @@ class selfstack:
 			if j >= 100:
 				break
 
-		ln_r,ln_v,ln_m = r2[:end],v2[:end],mags2[:end]
+		ln_r,ln_v,ln_gmags,ln_rmags,ln_imags = r2[:end],v2[:end],gmags2[:end],rmags2[:end],imags2[:end]
 		# Done! Now we have en_r and ln_r arrays (ensemble and line of sight arrays)
 		
-		return en_r,en_v,en_m,ln_r,ln_v,ln_m
+		return en_r,en_v,en_gmags,en_rmags,en_imags,ln_r,ln_v,ln_gmags,ln_rmags,ln_imags,samp_size
 
 	def build_method_2(self,r,v,mags,r_crit200):
 		'''Ordered Set of galaxies with respect to magnitude'''

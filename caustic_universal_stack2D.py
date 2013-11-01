@@ -70,7 +70,9 @@ class universal:
 		# Unpack Array HaloData into local namespace for easier use and clarity
 		M_crit200,R_crit200,Z,SRAD,ESRAD,HVD,HPX,HPY,HPZ,HVX,HVY,HVZ = HaloData	
 
-		Gal_Mags = []
+		G_Mags = []
+		R_Mags = []
+		I_Mags = []
 		Gal_V = []
 		Gal_P = []
 		Halo_P = []
@@ -78,20 +80,22 @@ class universal:
 		for k in range(self.halo_num):
 			galdata,hpx,hpy,hpz,hvx,hvy,hvz = self.load_galaxies(HaloID[k],HaloData.T[k])
 			# unpack array galdata into namespace
-			gpx,gpy,gpz,gvx,gvy,gvz,gal_mags = galdata	
+			gpx,gpy,gpz,gvx,gvy,gvz,gmags,rmags,imags = galdata	
 			halo_p	= np.array([hpx,hpy,hpz],float) 
 			halo_v	= np.array([hvx,hvy,hvz],float)
 			gal_p	= np.array([gpx,gpy,gpz],float)
 			gal_v	= np.array([gvx,gvy,gvz],float)
-			
-			Gal_Mags.append(gal_mags)
+		
+			G_Mags.append(gmags)
+			R_Mags.append(rmags)	
+			I_Mags.append(imags)
 			Halo_P.append(halo_p)
 			Halo_V.append(halo_v)			
 			Gal_P.append(gal_p)
 			Gal_V.append(gal_v)			
 
 		Halo_P,Halo_V = np.array(Halo_P),np.array(Halo_V)
-		Gal_Mags = np.array(Gal_Mags)		
+		Gal_Mags = np.vstack([ np.array(G_Mags),np.array(R_Mags),np.array(I_Mags) ])
 
 		return Halo_P,Halo_V,Gal_P,Gal_V,Gal_Mags,HaloData[0:6]
 
@@ -102,16 +106,16 @@ class universal:
 		# Open semi analytics	
 		f = pyfits.open(self.root+'/giffordw/Millenium/30Mpchalos/'+haloid+'.'+self.data_set+'.fits')
 		data = f[1].data
-		gal_z,gpx,gpy,gpz,gvx,gvy,gvz,mags = data.field(13),data.field(17),data.field(18),data.field(19),data.field(20),data.field(21),data.field(22),data.field(63)
+		gal_z,gpx,gpy,gpz,gvx,gvy,gvz,gmags,rmags,imags = data.field(13),data.field(17),data.field(18),data.field(19),data.field(20),data.field(21),data.field(22),data.field(62),data.field(63),data.field(64)
 		# Cosmology corrections
 		gpx,gpy,gpz = (gpx/(1+z)/self.h),(gpy/(1+z)/self.h),(gpz/(1+z)/self.h)
 		# convert to physical coordinates
 		gvx,gvy,gvz = gvx-hvx,gvy-hvy,gvz-hvz
-		mags = np.array(mags,float)
+		gmags,rmags,imags = np.array(gmags,float),np.array(rmags,float),np.array(imags,float)
 		# remove BCG from sample
 		BCG = np.where(gpx != hpx)
 
-		return np.vstack([ gpx[BCG], gpy[BCG], gpz[BCG], gvx[BCG], gvy[BCG], gvz[BCG], mags[BCG] ]),hpx,hpy,hpz,hvx,hvy,hvz
+		return np.vstack([ gpx[BCG], gpy[BCG], gpz[BCG], gvx[BCG], gvy[BCG], gvz[BCG], gmags[BCG], rmags[BCG], imags[BCG] ]),hpx,hpy,hpz,hvx,hvy,hvz
 
 
 	def scale_gals(self,r,v,r_crit200,hvd):
@@ -172,18 +176,19 @@ class universal:
 #		particle_vdisp3d[i] = HVD*np.sqrt(3)
 #		gal_rmag_new = gal_abs_rmag# + 5*np.log10(gal_dist*1e6/10.0)
 
-		return r, v
+		return r, v, new_pos
 
-	def limit_gals(self,r,v,mags,r200,hvd):
+	def limit_gals(self,r,v,gmags,rmags,imags,r200,hvd):
 		''' Sort data by magnitude, and elimite values outside phase space limits '''
-		# Sort by ascending magnitude (bright to dim)
-		sorts = np.argsort(mags)
-		r,v,mags = r[sorts],v[sorts],mags[sorts]
+		# Sort by ascending r magnitude (bright to dim)
+		sorts = np.argsort(rmags)
+		r,v,gmags,rmags,imags = r[sorts],v[sorts],gmags[sorts],rmags[sorts],imags[sorts]
 		# Limit Phase Space
 		sample = np.where( (r < r200*self.r_limit) & (v > -self.v_limit) & (v < self.v_limit) )[0] 
-		r,v,mags = r[sample],v[sample],mags[sample]
+		r,v,gmags,rmags,imags = r[sample],v[sample],gmags[sample],rmags[sample],imags[sample]
+		samp_size = len(sample)
 	
-		return r,v,mags
+		return r,v,gmags,rmags,imags,samp_size
 
 
 	def print_varibs(self,varib):
@@ -193,6 +198,7 @@ class universal:
 		print "gal_num			=",varib['gal_num']
 		print "line_num		=",varib['line_num']
 		print "method_num		=",varib['method_num']
+		print "data_loc		=",varib['data_loc']
 		print "write_loc		=",varib['write_loc']
 		print "data_set		=",varib['data_set']
 		print "self_stack		=",varib['self_stack']
