@@ -19,6 +19,7 @@ import astStats
 import sys
 import time
 import cPickle as pkl
+from mpl_toolkits.mplot3d import Axes3D
 
 from caustic_class_stack2D import *
 from caustic_universal_stack2D import *
@@ -26,27 +27,27 @@ from CausticMass import Caustic,CausticSurface,MassCalc
 
 
 ## FLAGS ##
-self_stack	= True			# Run self-stack or bin-stack
-scale_data	= False			# Scale data by r200 and vdisp if True
-use_flux	= True			# Using Flux if True, using Sophie if False
-write_data 	= True			# Write Data to Result directories if True
-light_cone	= False			# Input RA|DEC projection data if True, if False inputting x,y,z 3D data
-one_ens		= True			# Only solve for one ensemble cluster if true, this is generally the case when using an HPC
-clean_ens	= False			# Do an extra shiftgapper on ensemble before the lines of sight get stacked.
+self_stack	= True				# Run self-stack or bin-stack
+scale_data	= False				# Scale data by r200 and vdisp if True
+use_flux	= True				# Using Flux if True, using Sophie if False
+write_data 	= True				# Write Data to Result directories if True
+light_cone	= False				# Input RA|DEC projection data if True, if False inputting x,y,z 3D data
+clean_ens	= False				# Do an extra shiftgapper on ensemble before the lines of sight get stacked.
+small_set	= False				# 100 Halo Set or 2000 Halo Set
 
 ## CONSTANTS ##
-c 		= 2.99792e5		# speed of light in km/s
-h		= 1.0			# Hubble Constant, unitless
-H0		= h*100.0		# Hubble Constant, km s-1 Mpc-1
-q		= 10.0			# Scale of Gaussian Kernel Density Estimator
-beta		= 0.2			# Velocity Anisotropy Beta parameter, if constant profile
-fbeta		= 0.65			# fbeta value, see 'Diaferio 1999'
-r_limit 	= 1.5			# Radius Cut Scaled by R200
-v_limit		= 3500.0		# Velocity Cut in km/s
-data_set	= 'Guo30_2'		# Data set to draw semi analytic data from
-data_loc	= 'stack_data_2'	# Parent Directory where write_loc directories live
-halo_num	= 100			# Total number of halos loaded
-run_time	= time.asctime()	# Time when program was started
+c 		= 2.99792e5			# speed of light in km/s
+h		= 1.0				# Hubble Constant, unitless
+H0		= h*100.0			# Hubble Constant, km s-1 Mpc-1
+q		= 10.0				# Scale of Gaussian Kernel Density Estimator
+beta		= 0.2				# Velocity Anisotropy Beta parameter, if constant profile
+fbeta		= 0.65				# fbeta value, see 'Diaferio 1999'
+r_limit 	= 1.5				# Radius Cut Scaled by R200
+v_limit		= 3500.0			# Velocity Cut in km/s
+data_set	= 'Guo30_2'			# Data set to draw semi analytic data from
+data_loc	= 'selfstack_30cell_run_table'	# Parent Directory where write_loc directories live
+halo_num	= 2124				# Total number of halos loaded
+run_time	= time.asctime()		# Time when program was started
 
 ## RUN DEPENDENT CONSTANTS ##
 if len(sys.argv) > 1:				# If you feed the run with parameters
@@ -69,11 +70,15 @@ else:
 
 if self_stack == True:							# Change Write Directory Depending on Parameters
 	write_loc = 'ss_m'+str(method_num)+'_run'+str(run_num)		# Self Stack data-write location
+	clus_num = 1							# One unique halo per ensemble
+	stack_range = np.arange(ens_num,ens_num+1,1)			# Halo Index to Stack upon 
 else:
 	write_loc = 'bs_m'+str(method_num)+'_run'+str(run_num)		# Bin Stack data-write location
 
+
+
 ## Make dictionary for above constants
-varib = {'c':c,'h':h,'H0':H0,'q':q,'beta':beta,'fbeta':fbeta,'r_limit':r_limit,'v_limit':v_limit,'data_set':data_set,'halo_num':halo_num,'ens_num':ens_num,'gal_num':gal_num,'line_num':line_num,'method_num':method_num,'write_loc':write_loc,'data_loc':data_loc,'root':root,'self_stack':self_stack,'scale_data':scale_data,'use_flux':use_flux,'write_data':write_data,'light_cone':light_cone,'one_ens':one_ens,'run_time':run_time,'clean_ens':clean_ens}
+varib = {'c':c,'h':h,'H0':H0,'q':q,'beta':beta,'fbeta':fbeta,'r_limit':r_limit,'v_limit':v_limit,'data_set':data_set,'halo_num':halo_num,'ens_num':ens_num,'gal_num':gal_num,'line_num':line_num,'method_num':method_num,'write_loc':write_loc,'data_loc':data_loc,'root':root,'self_stack':self_stack,'scale_data':scale_data,'use_flux':use_flux,'write_data':write_data,'light_cone':light_cone,'run_time':run_time,'clean_ens':clean_ens,'small_set':small_set,'clus_num':clus_num,'stack_range':stack_range}
 
 ## INITIALIZATION ##
 U = universal(varib)
@@ -96,7 +101,12 @@ M_crit200,R_crit200,Z,SRAD,ESRAD,HVD,HPX,HPY,HPZ,HVX,HVY,HVZ = HaloData
 
 ## Load Galaxy Data
 U.print_separation('# ...Loading Galaxies',type=2)
-Halo_P,Halo_V,Gal_P,Gal_V,Gal_Mags,HaloData = U.configure_galaxies(HaloID,HaloData)
+Halo_P,Halo_V,Gal_P,Gal_V,G_Mags,R_Mags,I_Mags,HaloData = U.configure_galaxies(HaloID,HaloData)
+
+# Get Gal_P in physical coordinates
+Gal_P2 = []
+for [i,j] in zip(np.arange(clus_num),stack_range):
+	Gal_P2.append((Gal_P[i].T-Halo_P[j]).T)
 
 ## Solve for Ensemble number: ens_num 
 U.print_separation('# ...Starting Ensemble Loop',type=2)
@@ -105,15 +115,21 @@ for k in np.array([ens_num]):
 
 	# Build Ensemble and Run Caustic Technique
 	if self_stack:
-		stack_data = SS.self_stack_clusters(HaloID,HaloData,Halo_P,Halo_V,Gal_P,Gal_V,Gal_Mags,k)
+		stack_data = SS.self_stack_clusters(HaloID,HaloData,Halo_P,Halo_V,Gal_P,Gal_V,G_Mags,R_Mags,I_Mags,k,j)
 		# unpack data
 		ens_r,ens_v,ens_gmags,ens_rmags,ens_imags,ens_hvd,ens_caumass,ens_caumass_est,ens_causurf,ens_nfwsurf,los_r,los_v,los_gmags,los_rmags,los_imags,los_hvd,los_caumass,los_caumass_est,los_causurf,los_nfwsurf,x_range,sample_size,pro_pos = stack_data
 
 	else:
 		BS.bin_stack_clusters()
 
-	j += 1
 
+	# Get 3D data
+	gpx3d,gpy3d,gpz3d,gvx3d,gvy3d,gvz3d = U.get_3d(Gal_P2[j],Gal_V[j],G_Mags[j],R_Mags[j],I_Mags[j],ens_gmags,ens_rmags,ens_imags)		
+
+	# Combine into stack_data
+	stack_data = (ens_r,ens_v,ens_gmags,ens_rmags,ens_imags,ens_hvd,ens_caumass,ens_caumass_est,ens_causurf,ens_nfwsurf,los_r,los_v,los_gmags,los_rmags,los_imags,los_hvd,los_caumass,los_caumass_est,los_causurf,los_nfwsurf,x_range,sample_size,pro_pos,gpx3d,gpy3d,gpz3d,gvx3d,gvy3d,gvz3d)
+
+	j += 1
 
 ### Save Data into Pickle Files ###
 if write_data == True:
@@ -121,9 +137,8 @@ if write_data == True:
 	output = pkl.Pickler(pkl_file)
 	output.dump(stack_data)
 	output.dump(varib)
-	output.dump([HaloID,Halo_P,Halo_V,Gal_P,Gal_V,Gal_Mags,HaloData])
+	output.dump([HaloID,Halo_P,Halo_V,HaloData])
 	pkl_file.close()
-
 
 
 

@@ -27,9 +27,16 @@ class universal:
 
 	def load_halos(self):
 		'''This function loads halo data and makes cosmology corrections'''
-		HaloID = np.loadtxt(self.root+'/nkern/Caustic/biglosclusters.csv', delimiter=',', dtype='string', usecols=(0,), unpack=True)
-		HPX,HPY,HPZ,HVX,HVY,HVZ = np.loadtxt(self.root+'/nkern/Caustic/biglosclusters.csv', delimiter=',', dtype='float', usecols=(9,10,11,12,13,14), unpack=True)
-		SRAD,ESRAD,R_crit200,M_crit200,HVD,Z = np.loadtxt(self.root+'/nkern/Caustic/Millbig_concentrations.phys_phys.csv', delimiter=',', dtype='float', usecols=(1,2,5,7,9,12), unpack=True)
+		if self.small_set == True:
+			HaloID = np.loadtxt(self.root+'/nkern/Caustic/biglosclusters.csv', delimiter=',', dtype='string', usecols=(0,), unpack=True)
+			HPX,HPY,HPZ,HVX,HVY,HVZ = np.loadtxt(self.root+'/nkern/Caustic/biglosclusters.csv', delimiter=',', dtype='float', usecols=(9,10,11,12,13,14), unpack=True)
+			SRAD,ESRAD,R_crit200,M_crit200,HVD,Z = np.loadtxt(self.root+'/nkern/Caustic/Millbig_concentrations.phys_phys.csv', delimiter=',', dtype='float', usecols=(1,2,5,7,9,12), unpack=True)
+		else:
+			HaloID,HPX,HPY,HPZ,HVX,HVY,HVZ,R_crit200,M_crit200,HVD,Z = np.loadtxt(self.root+'/nkern/Millennium/Large_Halo_Set/halos.csv',usecols=(0,8,9,10,11,12,13,16,5,7,4),delimiter=',',unpack=True)
+			M_crit200 *= 1e10
+			HaloID = np.array(HaloID,int)
+			SRAD,ESRAD=np.ones(HaloID.size),np.ones(HaloID.size)
+
 		# Hubble Constant Coefficient
 		R_crit200,M_crit200,HPX,HPY,HPZ = R_crit200/self.h,M_crit200/self.h,HPX/self.h,HPY/self.h,HPZ/self.h
 		# Cosmological Correction
@@ -75,38 +82,38 @@ class universal:
 		I_Mags = []
 		Gal_V = []
 		Gal_P = []
-		Halo_P = []
-		Halo_V = []
-		for k in range(self.halo_num):
-			galdata,hpx,hpy,hpz,hvx,hvy,hvz = self.load_galaxies(HaloID[k],HaloData.T[k])
+		for k in self.stack_range:
+			galdata = self.load_galaxies(HaloID[k],HaloData.T[k])
 			# unpack array galdata into namespace
 			gpx,gpy,gpz,gvx,gvy,gvz,gmags,rmags,imags = galdata	
-			halo_p	= np.array([hpx,hpy,hpz],float) 
-			halo_v	= np.array([hvx,hvy,hvz],float)
 			gal_p	= np.array([gpx,gpy,gpz],float)
 			gal_v	= np.array([gvx,gvy,gvz],float)
 		
 			G_Mags.append(gmags)
 			R_Mags.append(rmags)	
 			I_Mags.append(imags)
-			Halo_P.append(halo_p)
-			Halo_V.append(halo_v)			
 			Gal_P.append(gal_p)
 			Gal_V.append(gal_v)			
 
-		Halo_P,Halo_V = np.array(Halo_P),np.array(Halo_V)
-		Gal_Mags = np.vstack([ np.array(G_Mags),np.array(R_Mags),np.array(I_Mags) ])
-
-		return Halo_P,Halo_V,Gal_P,Gal_V,Gal_Mags,HaloData[0:6]
+		Halo_P,Halo_V = np.vstack([HPX,HPY,HPZ]).T,np.vstack([HVX,HVY,HVZ]).T
+		
+		return Halo_P,Halo_V,Gal_P,Gal_V,G_Mags,R_Mags,I_Mags,HaloData[0:6]
 
 	def load_galaxies(self,haloid,halodata):
 		''' Loads haloid galaxies from a local directory '''
 		# Unpack array halodata into local namespace
 		m_crit200,r_crit200,z,srad,esrad,hvd,hpx,hpy,hpz,hvx,hvy,hvz = halodata
-		# Open semi analytics	
-		f = pyfits.open(self.root+'/giffordw/Millenium/30Mpchalos/'+haloid+'.'+self.data_set+'.fits')
-		data = f[1].data
-		gal_z,gpx,gpy,gpz,gvx,gvy,gvz,gmags,rmags,imags = data.field(13),data.field(17),data.field(18),data.field(19),data.field(20),data.field(21),data.field(22),data.field(62),data.field(63),data.field(64)
+		# load galaxy data
+		if self.small_set == True:
+			# 100 Halo Sample	
+			f = pyfits.open(self.root+'/giffordw/Millenium/30Mpchalos/'+haloid+'.'+self.data_set+'.fits')
+			data = f[1].data
+			gal_z,gpx,gpy,gpz,gvx,gvy,gvz,gmags,rmags,imags = data.field(13),data.field(17),data.field(18),data.field(19),data.field(20),data.field(21),data.field(22),data.field(62),data.field(63),data.field(64)
+		else:
+			# 2,000 Halo Sample
+			data = pyfits.getdata(self.root+'/nkern/Millennium/Large_Halo_Set/Halo_'+str(haloid)+'.Guo2010.fits')
+			gal_z,gpx,gpy,gpz,gvx,gvy,gvz,gmags,rmags,imags = data.field(3),data.field(6),data.field(7),data.field(8),data.field(9),data.field(10),data.field(11),data.field(14),data.field(15),data.field(16)
+
 		# Cosmology corrections
 		gpx,gpy,gpz = (gpx/(1+z)/self.h),(gpy/(1+z)/self.h),(gpz/(1+z)/self.h)
 		# convert to physical coordinates
@@ -115,7 +122,7 @@ class universal:
 		# remove BCG from sample
 		BCG = np.where(gpx != hpx)
 
-		return np.vstack([ gpx[BCG], gpy[BCG], gpz[BCG], gvx[BCG], gvy[BCG], gvz[BCG], gmags[BCG], rmags[BCG], imags[BCG] ]),hpx,hpy,hpz,hvx,hvy,hvz
+		return np.vstack([ gpx[BCG], gpy[BCG], gpz[BCG], gvx[BCG], gvy[BCG], gvz[BCG], gmags[BCG], rmags[BCG], imags[BCG] ])
 
 
 	def scale_gals(self,r,v,r_crit200,hvd):
@@ -124,19 +131,20 @@ class universal:
 		v /= hvd
 		return r, v
 
-	def pick_pos(self,halo_p):
+	def pick_pos(self,distance):
 	        '''Picks a random position for the observer a given distance away from the center'''
 		x = random.uniform(-1,1)
 		y = random.uniform(-1,1)
 		z = random.uniform(-1,1)
 		unit = np.array([x,y,z])/(x**2+y**2+z**2)**(.5)
-		# move the position randomly 30Mpc away
-	        return halo_p + 30*unit
+		# move the position randomly 'distance' Mpc away
+	        return distance*unit
 
 	def line_of_sight(self,gal_p,gal_v,halo_p,halo_v):
 		'''Line of Sight Calculations to mock projected data, if given 3D data'''
 		# Pick Position
-		new_pos = self.pick_pos(halo_p) 
+		new_pos = self.pick_pos(30)
+		new_pos += halo_p 
 
 		# New Halo Information
 		halo_dist = ((halo_p[0]-new_pos[0])**2 + (halo_p[1]-new_pos[1])**2 + (halo_p[2]-new_pos[2])**2)**0.5
@@ -187,8 +195,43 @@ class universal:
 		sample = np.where( (r < r200*self.r_limit) & (v > -self.v_limit) & (v < self.v_limit) )[0] 
 		r,v,gmags,rmags,imags = r[sample],v[sample],gmags[sample],rmags[sample],imags[sample]
 		samp_size = len(sample)
+		# Eliminate galaxies w/ mag = 99.
+		cut = np.where((gmags!=99)&(rmags!=99)&(imags!=99))[0]
+		r,v,gmags,rmags,imags = r[cut],v[cut],gmags[cut],rmags[cut],imags[cut]
+		samp_size = len(cut)
 	
 		return r,v,gmags,rmags,imags,samp_size
+
+
+	def get_3d(self,Gal_P,Gal_V,G_Mags,R_Mags,I_Mags,gmags,rmags,imags):
+		'''
+		This function retreives the 3D position and velocity data for finalized galaxies in phase spaces for a given Halo.
+		It matches the galaxies using the magnitude as a key, but rarley magnitudes are degenerate.
+		Therefore, three different magnitudes are provided, given the fact that degeneracy on all 3 levels for a given galaxy is extremely low.
+		'''
+		gpx3d,gpy3d,gpz3d,gvx3d,gvy3d,gvz3d = [],[],[],[],[],[]
+		# Match Galaxies by Magnitude
+		select = []
+		for i in xrange(len(gmags)):
+			pick = np.where(G_Mags==gmags[i])[0]
+			size = len(pick)
+			if size > 1:
+				pick = np.where(R_Mags==rmags[i])[0]
+				size = len(pick)
+				if size > 1:
+					pick = np.where(I_Mags==imags[i])[0]
+					size = len(pick)
+					if size > 1:
+						print 'degeneracy on all magnitudes!'
+						break
+			select.append(int(pick[0]))
+		select = np.array(select)
+		gpx3d,gpy3d,gpz3d = Gal_P[0][select],Gal_P[1][select],Gal_P[2][select]
+		gvx3d,gvy3d,gvz3d = Gal_V[0][select],Gal_V[1][select],Gal_V[2][select]
+
+		return gpx3d,gpy3d,gpz3d,gvx3d,gvy3d,gvz3d
+
+
 
 
 	def print_varibs(self,varib):

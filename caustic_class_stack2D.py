@@ -89,11 +89,11 @@ class selfstack:
 
 
 
-	def self_stack_clusters(self,HaloID,HaloData,Halo_P,Halo_V,Gal_P,Gal_V,Gal_Mags,k):
+	def self_stack_clusters(self,HaloID,HaloData,Halo_P,Halo_V,Gal_P,Gal_V,G_Mags,R_Mags,I_Mags,k,j):
 		''' Building Ensemble Cluster and Calculating Property Statistics '''
 		## Unpack HaloData array 
 		M_crit200,R_crit200,Z,SRAD,ESRAD,HVD = HaloData
-		G_Mags,R_Mags,I_Mags = Gal_Mags[0],Gal_Mags[1],Gal_Mags[2]
+
 		## Define Arrays for Building Ensemble and LOS
 		# Ensemble Arrays:	[Successive Ensemble Number][Data]
 		# Line of Sight Arrays:	[Line Of Sight][Data]
@@ -110,11 +110,11 @@ class selfstack:
 				pass
 			else:
 				# Line of Sight Calculation for naturally 3D data
-				r, v, projected_pos = self.U.line_of_sight(Gal_P[k],Gal_V[k],Halo_P[k],Halo_V[k])
+				r, v, projected_pos = self.U.line_of_sight(Gal_P[j],Gal_V[j],Halo_P[k],Halo_V[k])
 
 			# Limit Data in Phase Space
-			r,v,gmags,rmags,imags,samp_size = self.U.limit_gals(r,v,G_Mags[k],R_Mags[k],I_Mags[k],R_crit200[k],HVD[k])					
-			
+			r,v,gmags,rmags,imags,samp_size = self.U.limit_gals(r,v,G_Mags[j],R_Mags[j],I_Mags[j],R_crit200[k],HVD[k])
+	
 			# Build LOS and Ensemble, with given method of stacking
 			en_r,en_v,en_gmags,en_rmags,en_imags,ln_r,ln_v,ln_gmags,ln_rmags,ln_imags = self.build_ensemble(r,v,gmags,rmags,imags,HaloData.T[k],l)	
 
