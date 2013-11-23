@@ -13,6 +13,8 @@ from mpl_toolkits.mplot3d import Axes3D
 import sys
 from AttrDict import AttrDict
 import os.path
+from caustic_universal_stack2D import universal
+import warnings
 
 ## Flags ##
 use_flux	= True				# Running on flux or sophie?
@@ -24,6 +26,9 @@ if use_flux == True:
 	root = str('/nfs/christoq_ls')
 else:
 	root = str('/n/Christoq1')
+
+## Constants ##
+warnings.filterwarnings("module",message="Warning: converting a masked element to nan.")
 
 
 ## Functions ##
@@ -57,13 +62,11 @@ class Recover():
 
 		stack_data 			= input.load()
 		varib				= input.load()
-		HaloID,Halo_P,Halo_V,HaloData	= input.load()
 
 		# Clear Up Memory
 		del input
 
 		ens_r,ens_v,ens_gmags,ens_rmags,ens_imags,ens_hvd,ens_caumass,ens_caumass_est,ens_causurf,ens_nfwsurf,los_r,los_v,los_gmags,los_rmags,los_imags,los_hvd,los_caumass,los_caumass_est,los_causurf,los_nfwsurf,x_range,sample_size,pro_pos,gpx3d,gpy3d,gpz3d,gvx3d,gvy3d,gvz3d = stack_data
-		M_crit200,R_crit200,Z,SRAD,ESRAD,HVD = HaloData	
 
 		# Append stack_data to major lists
 		ENS_R.append(ens_r)
@@ -97,20 +100,19 @@ class Recover():
 
 		# Loop over ensembles
 		j = 0
-		for i in np.arange(1,100):
+		for i in np.arange(1,2124):
 			# Progress Bar
 			sys.stdout.write("Progress... "+str(j)+"\r")
 			sys.stdout.flush()
 			j += 1
-
 			pkl_file = open(root+'/nkern/Stacking/'+data_loc+'/'+write_loc+'/Ensemble_'+str(i)+'_Data.pkl','rb')
 			input = pkl.Unpickler(pkl_file)
-
 			stack_data = input.load()
 
 			# Clear up Memory
 			del input
-
+			
+			# Unpack Variables
 			ens_r,ens_v,ens_gmags,ens_rmags,ens_imags,ens_hvd,ens_caumass,ens_caumass_est,ens_causurf,ens_nfwsurf,los_r,los_v,los_gmags,los_rmags,los_imags,los_hvd,los_caumass,los_caumass_est,los_causurf,los_nfwsurf,x_range,sample_size,pro_pos,gpx3d,gpy3d,gpz3d,gvx3d,gvy3d,gvz3d  = stack_data
 
 			# Append stack_data to major lists
@@ -175,8 +177,16 @@ class Recover():
 		GVY3D = np.array(GVY3D)
 		GVZ3D = np.array(GVZ3D)
 
-		#Update global namespace with varib attributes
-		globals().update(varib)
+		## Get Halo Data
+		# Initialize universal class
+		self.U = universal(varib)
+		# Load and Sort Halos by Mass
+		HaloID,HaloData = self.U.load_halos()
+		HaloID,HaloData = self.U.sort_halos(HaloID,HaloData)
+		M_crit200,R_crit200,Z,SRAD,ESRAD,HVD,HPX,HPY,HPZ,HVX,HVY,HVZ = HaloData
+		# Build Halo_P, Halo_V
+		Halo_P = np.vstack([HPX,HPY,HPZ])
+		Halo_V = np.vstack([HVX,HVY,HVZ])
 
 		### Statistical Calculations ###
 
@@ -199,7 +209,7 @@ class Recover():
 			ens_vfrac = ma.log(ENS_HVD/HVD)
 
 		# LOS Mass Fraction Arrays
-		array_size = halo_num		# halo_num for horizontal avg first, line_num for vertical avg first. See sites page
+		array_size = varib['halo_num']	# halo_num for horizontal avg first, line_num for vertical avg first. See sites page
 		los_mfrac,los_vfrac = np.zeros(array_size),np.zeros(array_size)
 		for a in range(array_size):
 			try:

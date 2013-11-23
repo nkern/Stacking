@@ -38,7 +38,8 @@ class universal:
 			SRAD,ESRAD=np.ones(HaloID.size),np.ones(HaloID.size)
 
 		# Hubble Constant Coefficient
-		R_crit200,M_crit200,HPX,HPY,HPZ = R_crit200/self.h,M_crit200/self.h,HPX/self.h,HPY/self.h,HPZ/self.h
+		R_crit200,M_crit200,HPX,HPY,HPZ = R_crit200,M_crit200,HPX,HPY,HPZ
+
 		# Cosmological Correction
 		for l in xrange(len(HaloID)):	
 			HPX[l],HPY[l],HPZ[l] = HPX[l]/(1+Z[l]),HPY[l]/(1+Z[l]),HPZ[l]/(1+Z[l])	
@@ -82,7 +83,7 @@ class universal:
 		I_Mags = []
 		Gal_V = []
 		Gal_P = []
-		for k in self.stack_range:
+		for k in self.stack_num:
 			galdata = self.load_galaxies(HaloID[k],HaloData.T[k])
 			# unpack array galdata into namespace
 			gpx,gpy,gpz,gvx,gvy,gvz,gmags,rmags,imags = galdata	
@@ -115,7 +116,7 @@ class universal:
 			gal_z,gpx,gpy,gpz,gvx,gvy,gvz,gmags,rmags,imags = data.field(3),data.field(6),data.field(7),data.field(8),data.field(9),data.field(10),data.field(11),data.field(14),data.field(15),data.field(16)
 
 		# Cosmology corrections
-		gpx,gpy,gpz = (gpx/(1+z)/self.h),(gpy/(1+z)/self.h),(gpz/(1+z)/self.h)
+		gpx,gpy,gpz = (gpx/(1+z)),(gpy/(1+z)),(gpz/(1+z))
 		# convert to physical coordinates
 		gvx,gvy,gvz = gvx-hvx,gvy-hvy,gvz-hvz
 		gmags,rmags,imags = np.array(gmags,float),np.array(rmags,float),np.array(imags,float)
@@ -236,18 +237,19 @@ class universal:
 
 	def print_varibs(self,varib):
 		print "Start Time		=",time.asctime()
-		print "halo_num		=",varib['halo_num']
-		print "ens_num			=",varib['ens_num']
+		print "run_num			=",varib['run_num']
+		print "clus_num		=",varib['clus_num']
 		print "gal_num			=",varib['gal_num']
 		print "line_num		=",varib['line_num']
+		print "cell_num		=",varib['cell_num']
+		print "halo_num		=",varib['halo_num']
 		print "method_num		=",varib['method_num']
 		print "data_loc		=",varib['data_loc']
 		print "write_loc		=",varib['write_loc']
 		print "data_set		=",varib['data_set']
+		print "small_set		=",varib['small_set']
 		print "self_stack		=",varib['self_stack']
 		print "write_data		=",varib['write_data']
-		print "scale_data		=",varib['scale_data']
-		print "light_cone		=",varib['light_cone']
 		return	
 
 	def print_separation(self,text,type=1):

@@ -80,11 +80,13 @@ class selfstack:
 
 		## Caustic Surface Calculation
 		# This function takes RA, DEC and Z as first input, for now it is empty, all relavent files go to class dictionary
-		self.CS = self.CausticSurface(np.zeros(0),self.C.x_range,self.C.y_range,self.C.img_tot,r200=r_crit200,halo_scale_radius=srad,halo_scale_radius_e=esrad,halo_vdisp=derived_hvd,beta=self.beta)
+		if self.small_set == True:
+			self.CS = self.CausticSurface(np.zeros(0),self.C.x_range,self.C.y_range,self.C.img_tot,r200=r_crit200,halo_scale_radius=srad,halo_scale_radius_e=esrad,halo_vdisp=derived_hvd,beta=self.beta)
+		else:
+			self.CS = self.CausticSurface(np.zeros(0),self.C.x_range,self.C.y_range,self.C.img_tot,r200=r_crit200,halo_vdisp=derived_hvd,beta=self.beta)
 
 		## Mass Calculation, leave clus_z blank for now
-		self.MC = self.MassCalc(self.C.x_range,self.CS.vesc_fit,derived_hvd,0,r200=r_crit200,beta=self.beta,fbr=self.fbeta,H0=self.H0)
-
+		self.MC = self.MassCalc(self.C.x_range,self.CS.Ar_finalD,derived_hvd,0,r200=r_crit200,beta=self.beta,fbr=self.fbeta,H0=self.H0)
 		return self.MC.M200,self.MC.M200_est,self.CS.Ar_finalD,self.CS.vesc_fit	
 
 
@@ -131,10 +133,16 @@ class selfstack:
 			if gal_count <= 3:
 				'''biweightScale can't take less than 4 elements'''
 				# Calculate hvd with numpy std of galaxies within r200 (b/c this is quoted richness)
-				ln_hvd = np.std( np.copy(ln_v)[ln_within] )
+				ln_hvd = np.std(np.copy(ln_v)[ln_within])
 			else:
 				# Calculate hvd with astStats biweightScale (see Beers 1990)
-				ln_hvd = astStats.biweightScale(np.copy(ln_v)[ln_within],9.0)
+				try:
+					ln_hvd = astStats.biweightScale(np.copy(ln_v)[ln_within],9.0)
+				# Sometimes divide by zero error in biweight function for low gal_num
+				except ZeroDivisionError:
+					print 'ZeroDivisionError in biweightfunction, line 140 in caustic_class_stack2D'
+					print 'ln_v[ln_within]=',ln_v[ln_within]
+					ln_hvd = np.std(np.copy(ln_v)[ln_within])
 
 			# Run Caustic Technique for LOS mass estimation
 			ln_caumass,ln_caumass_est,ln_causurf,ln_nfwsurf = self.kernel_caustic_masscalc(ln_r,ln_v,HaloData.T[k],ln_hvd,k,l)

@@ -47,21 +47,22 @@ v_limit		= 3500.0			# Velocity Cut in km/s
 data_set	= 'Guo30_2'			# Data set to draw semi analytic data from
 data_loc	= 'selfstack_30cell_run_table'	# Parent Directory where write_loc directories live
 halo_num	= 2124				# Total number of halos loaded
+method_num	= 1				# Build Ensemble Method Number
 run_time	= time.asctime()		# Time when program was started
 
 ## RUN DEPENDENT CONSTANTS ##
-if len(sys.argv) > 1:				# If you feed the run with parameters
-	ens_num		= int(sys.argv[1])	# Number of Ensembles to solve for
-	gal_num		= int(sys.argv[2])	# Number of galaxies taken per line of sight
-	line_num	= int(sys.argv[3])	# Number of lines of sight to stack over
-	run_num		= int(sys.argv[4])	# Run Number ID corresponding to given gal_num & line_num geometry
-	method_num	= int(sys.argv[5])	# Self Stacking Method to Use
+if len(sys.argv) == 6:				# If you feed the run with parameters
+	run_num		= int(sys.argv[1])	# Run Number within a Job Array
+	clus_num	= int(sys.argv[2])	# Number of Clusters to Solve for in this run
+	gal_num		= int(sys.argv[3])	# Number of galaxies taken per line of sight
+	line_num	= int(sys.argv[4])	# Number of lines of sight to stack over
+	cell_num	= int(sys.argv[5])	# Cell Number ID corresponding to given gal_num & line_num geometry in a Run Table
 else:
-	ens_num		= 1
+	run_num		= 0
+	clus_num	= 1
 	gal_num		= 10
 	line_num	= 10
-	run_num		= 1
-	method_num	= 1
+	cell_num	= 0
 
 if use_flux == True: 
 	root=str('/nfs/christoq_ls')	# Change directory scheme if using flux or sophie
@@ -69,16 +70,14 @@ else:
 	root=str('/n/Christoq1')
 
 if self_stack == True:							# Change Write Directory Depending on Parameters
-	write_loc = 'ss_m'+str(method_num)+'_run'+str(run_num)		# Self Stack data-write location
-	clus_num = 1							# One unique halo per ensemble
-	stack_range = np.arange(ens_num,ens_num+1,1)			# Halo Index to Stack upon 
+	write_loc = 'ss_m'+str(method_num)+'_run'+str(cell_num)		# Self Stack data-write location
 else:
 	write_loc = 'bs_m'+str(method_num)+'_run'+str(run_num)		# Bin Stack data-write location
 
-
+stack_num = np.arange(run_num*clus_num,run_num*clus_num+clus_num)	# Halo Indicies to Stack Upon
 
 ## Make dictionary for above constants
-varib = {'c':c,'h':h,'H0':H0,'q':q,'beta':beta,'fbeta':fbeta,'r_limit':r_limit,'v_limit':v_limit,'data_set':data_set,'halo_num':halo_num,'ens_num':ens_num,'gal_num':gal_num,'line_num':line_num,'method_num':method_num,'write_loc':write_loc,'data_loc':data_loc,'root':root,'self_stack':self_stack,'scale_data':scale_data,'use_flux':use_flux,'write_data':write_data,'light_cone':light_cone,'run_time':run_time,'clean_ens':clean_ens,'small_set':small_set,'clus_num':clus_num,'stack_range':stack_range}
+varib = {'c':c,'h':h,'H0':H0,'q':q,'beta':beta,'fbeta':fbeta,'r_limit':r_limit,'v_limit':v_limit,'data_set':data_set,'halo_num':halo_num,'gal_num':gal_num,'line_num':line_num,'method_num':method_num,'write_loc':write_loc,'data_loc':data_loc,'root':root,'self_stack':self_stack,'scale_data':scale_data,'use_flux':use_flux,'write_data':write_data,'light_cone':light_cone,'run_time':run_time,'clean_ens':clean_ens,'small_set':small_set,'run_num':run_num,'clus_num':clus_num,'cell_num':cell_num,'stack_num':stack_num}
 
 ## INITIALIZATION ##
 U = universal(varib)
@@ -105,13 +104,15 @@ Halo_P,Halo_V,Gal_P,Gal_V,G_Mags,R_Mags,I_Mags,HaloData = U.configure_galaxies(H
 
 # Get Gal_P in physical coordinates
 Gal_P2 = []
-for [i,j] in zip(np.arange(clus_num),stack_range):
+for [i,j] in zip(np.arange(clus_num),stack_num):
 	Gal_P2.append((Gal_P[i].T-Halo_P[j]).T)
 
-## Solve for Ensemble number: ens_num 
+## Run Code! 
 U.print_separation('# ...Starting Ensemble Loop',type=2)
+# Initialize Multi Halo Array to hold resultant data
+STACK_DATA = []
 j = 0
-for k in np.array([ens_num]):
+for k in stack_num:
 
 	# Build Ensemble and Run Caustic Technique
 	if self_stack:
@@ -128,22 +129,31 @@ for k in np.array([ens_num]):
 
 	# Combine into stack_data
 	stack_data = (ens_r,ens_v,ens_gmags,ens_rmags,ens_imags,ens_hvd,ens_caumass,ens_caumass_est,ens_causurf,ens_nfwsurf,los_r,los_v,los_gmags,los_rmags,los_imags,los_hvd,los_caumass,los_caumass_est,los_causurf,los_nfwsurf,x_range,sample_size,pro_pos,gpx3d,gpy3d,gpz3d,gvx3d,gvy3d,gvz3d)
+	
+	# Append to STACK_DATA
+	STACK_DATA.append(stack_data)
 
 	j += 1
 
-### Save Data into Pickle Files ###
+# Finished Loop
+U.print_separation('#...Finished Ensemble Loop',type=2)
+
+### Save Data into Fits Files ###
 if write_data == True:
-	pkl_file = open(root+'/nkern/Stacking/'+data_loc+'/'+write_loc+'/Ensemble_'+str(ens_num)+'_Data.pkl','wb')
-	output = pkl.Pickler(pkl_file)
-	output.dump(stack_data)
-	output.dump(varib)
-	output.dump([HaloID,Halo_P,Halo_V,HaloData])
-	pkl_file.close()
+	U.print_separation('#...Starting Data Write',type=2)
+	j = 0
+	for a in stack_num:
+		U.print_separation('Writing Halo: '+str(a),type=2)
+		pkl_file = open(root+'/nkern/Stacking/'+data_loc+'/'+write_loc+'/Ensemble_'+str(a)+'_Data.pkl','wb')
+		output = pkl.Pickler(pkl_file)
+		output.dump(STACK_DATA[j])
+		output.dump(varib)
+		pkl_file.close()
+		j += 1
+	
+	U.print_separation('#...Finished Data Write',type=2)
 
 
-
-
-
-
+U.print_separation('## Finished caustic_mass_stack2D.py'+'\n'+'Start:'+'\t'+run_time+'\n'+'End:'+'\t'+time.asctime(),type=1)
 
 
