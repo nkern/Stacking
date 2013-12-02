@@ -38,12 +38,13 @@ class Recover():
 	def __init__(self):
 		pass
 
-	def ss_recover(self,write_loc=write_loc,go_global=True):
+	def ss_recover(self,write_loc=write_loc,raw_data=False,halo_range=np.arange(2124),go_global=True):
 		"""
 		This function uploads the pickle files from directory stack_data and configures them into multi dimensional arrays.
 		It is meant to work with the self-stacked ensembles.
 		go_global = True makes variables uploaded to global dictionary, False makes it returned to a dictionary
 		write_loc = place where data lives
+		raw_data: if True, output just mass estimates and caustic surfaces, no statistical calculations
 		"""
 		# For now, the "varib" dictionary and "HALODATA" array only need to be uploaded from one halo, say the first.
 		# However, we must loop over the ensemble data to combine the stack_data arrays.
@@ -57,14 +58,11 @@ class Recover():
 		SAMS,PRO_POS,GPX3D,GPY3D,GPZ3D,GVX3D,GVY3D,GVZ3D = [],[],[],[],[],[],[],[]
 
 		# Initialization step 
-		pkl_file = open(root+'/nkern/Stacking/'+data_loc+'/'+write_loc+'/Ensemble_'+str(0)+'_Data.pkl','rb')
+		pkl_file = open(root+'/nkern/Stacking/'+data_loc+'/'+write_loc+'/Ensemble_'+str(halo_range[0])+'_Data.pkl','rb')
 		input = pkl.Unpickler(pkl_file)
 
 		stack_data 			= input.load()
 		varib				= input.load()
-
-		# Clear Up Memory
-		del input
 
 		ens_r,ens_v,ens_gmags,ens_rmags,ens_imags,ens_hvd,ens_caumass,ens_caumass_est,ens_causurf,ens_nfwsurf,los_r,los_v,los_gmags,los_rmags,los_imags,los_hvd,los_caumass,los_caumass_est,los_causurf,los_nfwsurf,x_range,sample_size,pro_pos,gpx3d,gpy3d,gpz3d,gvx3d,gvy3d,gvz3d = stack_data
 
@@ -100,7 +98,7 @@ class Recover():
 
 		# Loop over ensembles
 		j = 0
-		for i in np.arange(1,2124):
+		for i in halo_range[1:]:
 			# Progress Bar
 			sys.stdout.write("Progress... "+str(j)+"\r")
 			sys.stdout.flush()
@@ -109,9 +107,6 @@ class Recover():
 			input = pkl.Unpickler(pkl_file)
 			stack_data = input.load()
 
-			# Clear up Memory
-			del input
-			
 			# Unpack Variables
 			ens_r,ens_v,ens_gmags,ens_rmags,ens_imags,ens_hvd,ens_caumass,ens_caumass_est,ens_causurf,ens_nfwsurf,los_r,los_v,los_gmags,los_rmags,los_imags,los_hvd,los_caumass,los_caumass_est,los_causurf,los_nfwsurf,x_range,sample_size,pro_pos,gpx3d,gpy3d,gpz3d,gvx3d,gvy3d,gvz3d  = stack_data
 
@@ -183,47 +178,62 @@ class Recover():
 		# Load and Sort Halos by Mass
 		HaloID,HaloData = self.U.load_halos()
 		HaloID,HaloData = self.U.sort_halos(HaloID,HaloData)
-		M_crit200,R_crit200,Z,SRAD,ESRAD,HVD,HPX,HPY,HPZ,HVX,HVY,HVZ = HaloData
+		HaloID,M_crit200,R_crit200,Z,SRAD,ESRAD,HVD,HPX,HPY,HPZ,HVX,HVY,HVZ = np.vstack((HaloID,HaloData)).T[halo_range].T
+		HaloID = np.array(HaloID,int)
 		# Build Halo_P, Halo_V
 		Halo_P = np.vstack([HPX,HPY,HPZ])
 		Halo_V = np.vstack([HVX,HVY,HVZ])
 
-		### Statistical Calculations ###
+		if raw_data == True:
+			# Return to Namespaces depending on go_global
+			names = ['varib','HaloID','Halo_P','Halo_V','GPX3D','GPY3D','GPZ3D','GVX3D','GVY3D','GVZ3D','M_crit200','R_crit200','Z','SRAD','ESRAD','HVD','x_range','ENS_CAUMASS','ENS_CAUMASS_EST','ENS_CAUSURF','ENS_NFWSURF','LOS_CAUMASS','LOS_CAUMASS_EST','LOS_CAUSURF','LOS_NFWSURF','ENS_R','ENS_V','ENS_GMAGS','ENS_RMAGS','ENS_IMAGS','LOS_R','LOS_V','LOS_GMAGS','LOS_RMAGS','LOS_IMAGS','ENS_HVD','LOS_HVD','SAMS','PRO_POS']
+			data = [varib,HaloID,Halo_P,Halo_V,GPX3D,GPY3D,GPZ3D,GVX3D,GVY3D,GVZ3D,M_crit200,R_crit200,Z,SRAD,ESRAD,HVD,x_range,ENS_CAUMASS,ENS_CAUMASS_EST,ENS_CAUSURF,ENS_NFWSURF,LOS_CAUMASS,LOS_CAUMASS_EST,LOS_CAUSURF,LOS_NFWSURF,ENS_R,ENS_V,ENS_GMAGS,ENS_RMAGS,ENS_IMAGS,LOS_R,LOS_V,LOS_GMAGS,LOS_RMAGS,LOS_IMAGS,ENS_HVD,LOS_HVD,SAMS,PRO_POS]
+			mydict = dict( zip(names,data) )
+			if go_global == True:
+				globals().update(mydict)
+				return
+			elif go_global == False:
+				return  mydict	
 
-		# Defined a Masked array for sometimes zero terms
-		epsilon = 1.0
+		################################
+		### Statistical Calculations ###
+		################################
+
+		# Define a Masked array for sometimes zero terms
+		epsilon = 10.0
 		use_est = False				# Use MassCalc estimated r200 mass values if true 
 		if use_est == False:
-			maLOS_CAUMASS = ma.masked_array(LOS_CAUMASS,mask=LOS_CAUMASS<epsilon)	# Mask '0' values
-			maLOS_HVD = ma.masked_array(LOS_HVD,mask=LOS_HVD<epsilon)		# Mask '0' values
+			maENS_CAUMASS	= ma.masked_array(ENS_CAUMASS,mask=ENS_CAUMASS<epsilon)		# Mask essentially zero values
+			maENS_HVD	= ma.masked_array(ENS_HVD,mask=ENS_HVD<epsilon)
+			maLOS_CAUMASS	= ma.masked_array(LOS_CAUMASS,mask=LOS_CAUMASS<epsilon)		
+			maLOS_HVD	= ma.masked_array(LOS_HVD,mask=LOS_HVD<epsilon)
 		else:
-			maLOS_CAUMASS = ma.masked_array(LOS_CAUMASS_EST,mask=LOS_CAUMASS_EST<epsilon)	# Mask '0' values
-			maLOS_HVD = ma.masked_array(LOS_HVD,mask=LOS_HVD<epsilon)		# Mask '0' values
+			maENS_CAUMASS	= ma.masked_array(ENS_CAUMASS_EST,mask=ENS_CAUMASS_EST<epsilon)	# Mask essentially zero values
+			maENS_HVD	= ma.masked_array(ENS_HVD_EST,mask=ENS_HVD_EST<epsilon)
+			maLOS_CAUMASS	= ma.masked_array(LOS_CAUMASS_EST,mask=LOS_CAUMASS_EST<epsilon)	
+			maLOS_HVD	= ma.masked_array(LOS_HVD_EST,mask=LOS_HVD_EST<epsilon)			
 	
 		# Ensemble Mass Fraction Arrays after taking logarithm. 
-		if use_est == False:
-			ens_mfrac = ma.log(ENS_CAUMASS/M_crit200)
-			ens_vfrac = ma.log(ENS_HVD/HVD)
-		else:
-			ens_mfrac = ma.log(ENS_CAUMASS_EST/M_crit200)
-			ens_vfrac = ma.log(ENS_HVD/HVD)
+		ens_mfrac = ma.log(maENS_CAUMASS/M_crit200)
+		ens_vfrac = ma.log(maENS_HVD/HVD)
 
 		# LOS Mass Fraction Arrays
-		array_size = varib['halo_num']	# halo_num for horizontal avg first, line_num for vertical avg first. See sites page
-		los_mfrac,los_vfrac = np.zeros(array_size),np.zeros(array_size)
+		array_size = halo_range.size	# halo_range.size for horizontal avg first, line_num for vertical avg first. See sites page
+		los_mfrac,los_vfrac = ma.array([]),ma.array([])
 		for a in range(array_size):
-			try:
-				los_mfrac[a] = astStats.biweightLocation( ma.copy( ma.log( maLOS_CAUMASS[a]/M_crit200[a]) ), 6.0 )
-				los_vfrac[a] = astStats.biweightLocation( ma.copy( ma.log( maLOS_HVD[a]/HVD[a]) ), 6.0 )
-			except:
-				los_mfrac[a] = ma.mean( ma.log( maLOS_CAUMASS[a]/M_crit200[a]) )
-				los_vfrac[a] = ma.mean( ma.log( maLOS_HVD[a]/HVD[a]) )
+			# biweightLocation takes only arrays with 4 or more elements
+			if len(ma.compressed(maLOS_CAUMASS[a])) > 4:
+				los_mfrac = np.append( los_mfrac, astStats.biweightLocation( ma.compressed(np.log(maLOS_CAUMASS[a]/M_crit200[a])),6.0 )	)
+				los_vfrac = np.append( los_vfrac, astStats.biweightLocation( ma.compressed(np.log(maLOS_HVD[a]/HVD[a])),6.0 )		)
+			else:
+				los_mfrac = np.append( los_mfrac, ma.median( ma.log(maLOS_CAUMASS[a]/M_crit200[a]) )	)
+				los_vfrac = np.append( los_vfrac, ma.median( ma.log(maLOS_HVD[a]/HVD[a]) )		)
 
 		# Bias and Scatter Calculation
-		ens_mbias,ens_mscat	= astStats.biweightLocation(ma.copy(ens_mfrac),6.0),astStats.biweightScale(ma.copy(ens_mfrac),9.0)
-		los_mbias,los_mscat	= astStats.biweightLocation(ma.copy(los_mfrac),6.0),astStats.biweightScale(ma.copy(los_mfrac),9.0)
-		ens_vbias,ens_vscat	= astStats.biweightLocation(ma.copy(ens_vfrac),6.0),astStats.biweightScale(ma.copy(ens_vfrac),9.0)
-		los_vbias,los_vscat	= astStats.biweightLocation(ma.copy(los_vfrac),6.0),astStats.biweightScale(ma.copy(los_vfrac),9.0)
+		ens_mbias,ens_mscat = astStats.biweightLocation(ma.compressed(ens_mfrac),6.0),astStats.biweightScale(ma.compressed(ens_mfrac),9.0)
+		los_mbias,los_mscat = astStats.biweightLocation(ma.compressed(los_mfrac),6.0),astStats.biweightScale(ma.compressed(los_mfrac),9.0)
+		ens_vbias,ens_vscat = astStats.biweightLocation(ma.compressed(ens_vfrac),6.0),astStats.biweightScale(ma.compressed(ens_vfrac),9.0)
+		los_vbias,los_vscat = astStats.biweightLocation(ma.compressed(los_vfrac),6.0),astStats.biweightScale(ma.compressed(los_vfrac),9.0)
 
 		# Extra Arrays
 		avgLOS_CAUMASS = np.array(map(np.median,maLOS_CAUMASS))
@@ -249,6 +259,25 @@ class Work(Recover):
 
 	def __init__(self,Recover):
 		pass	
+	
+	def append_data(self,write_loc,i):
+		''' This function was created so as to reclaim the mydict dictionary memory after exiting the function.'''
+		
+		# Load in Data from Run Table and append
+		mydict = self.ss_recover(write_loc=write_loc,halo_range=np.arange(10),go_global=False)
+		d = AttrDict(mydict)
+		RUN_NUM.append(i)
+		GAL_NUM.append(d.varib['gal_num'])
+		LINE_NUM.append(d.varib['line_num'])
+		ENS_MBIAS.append(d.ens_mbias)
+		ENS_MSCAT.append(d.ens_mscat)
+		ENS_VBIAS.append(d.ens_vbias)
+		ENS_VSCAT.append(d.ens_vscat)
+		LOS_MBIAS.append(d.los_mbias)
+		LOS_MSCAT.append(d.los_mscat)
+		LOS_VBIAS.append(d.los_vbias)
+		LOS_VSCAT.append(d.los_vscat)	
+
 
 	def load_all(self,iter_array=None,tab_shape=None):
 		'''
@@ -259,8 +288,8 @@ class Work(Recover):
 
 		# Configure Variables
 		if iter_array == None:
-			iter_array = np.arange(1,21)
-			tab_shape = (4,5)
+			iter_array = np.arange(1,36)
+			tab_shape = (5,7)
 
 		# Define globals
 		global ENS_MBIAS,ENS_MSCAT,ENS_VBIAS,ENS_VSCAT,LOS_MBIAS,LOS_MSCAT,LOS_VBIAS,LOS_VSCAT
@@ -277,40 +306,17 @@ class Work(Recover):
 			print ''
 			print 'Working on Run #'+str(i)
 			print '-'*25
-
 			write_loc = 'ss_m1_run'+str(i)
-			mydict = self.ss_recover(write_loc=write_loc,go_global=False)
-			d = AttrDict(mydict)
-			RUN_NUM.append(i)
-			GAL_NUM.append(d.varib['gal_num'])
-			LINE_NUM.append(d.varib['line_num'])
-			ENS_MBIAS.append(d.ens_mbias)
-			ENS_MSCAT.append(d.ens_mscat)
-			ENS_VBIAS.append(d.ens_vbias)
-			ENS_VSCAT.append(d.ens_vscat)
-			LOS_MBIAS.append(d.los_mbias)
-			LOS_MSCAT.append(d.los_mscat)
-			LOS_VBIAS.append(d.los_vbias)
-			LOS_VSCAT.append(d.los_vscat)	
-
-			# Clear Up Memory			
-			del mydict,d
+			self.append_data(write_loc,i)
 
 		# Make into arrays that resemble table
-		try:
-			print 'Table Shape =',tab_shape
-		except:
-			print 'Table Shape not defined'
-			tab_shape = input('Enter table shape as a tuple, (rows,columns) : ')
-			
-
+		print 'Table Shape =',tab_shape
 		ENS_MBIAS,ENS_MSCAT,ENS_VBIAS,ENS_VSCAT = np.array(ENS_MBIAS).reshape(tab_shape),np.array(ENS_MSCAT).reshape(tab_shape),np.array(ENS_VBIAS).reshape(tab_shape),np.array(ENS_VSCAT).reshape(tab_shape)
 		LOS_MBIAS,LOS_MSCAT,LOS_VBIAS,LOS_VSCAT = np.array(LOS_MBIAS).reshape(tab_shape),np.array(LOS_MSCAT).reshape(tab_shape),np.array(LOS_VBIAS).reshape(tab_shape),np.array(LOS_VSCAT).reshape(tab_shape)
 		RUN_NUM,GAL_NUM,LINE_NUM = np.array(RUN_NUM).reshape(tab_shape),np.array(GAL_NUM).reshape(tab_shape),np.array(LINE_NUM).reshape(tab_shape) 
 
 		# Other Data Arrays
 		RICH_NUM = GAL_NUM*LINE_NUM
-
 		return
 
 	def oto(self,xarray,yarray,style='ko',alpha=None):
@@ -325,12 +331,36 @@ class Work(Recover):
 	def get_3d(self):
 		pass
 	
+	def sample_histogram(self,caumass,truemass,bins=20,ax=None):
+		if ax == None:
+			mp.hist(caumass,bins=bins,color='b',alpha=.6)
+			p1 = mp.axvline(truemass,ymin=.8,color='k',lw=1.5)
+			p2 = mp.axvline(np.median(caumass*1),ymin=.8,color='g',lw=1.5)
+			p3 = mp.axvline(np.mean(caumass*1),ymin=.8,color='c',lw=1.5)
+			p4 = mp.axvline(astStats.biweightLocation(caumass*1,6.0),ymin=.8,color='r',lw=1.5)
+			mp.legend([p1,p2,p3,p4],["Table Mass","Median","Mean","biweightLocation"])
+		else:
+			ax.hist(caumass,bins=bins,color='b',alpha=.6)
+			p1 = ax.axvline(truemass,ymin=.8,color='k',lw=1.5)
+			p2 = ax.axvline(np.median(caumass*1),ymin=.8,color='g',lw=1.5)
+			p3 = ax.axvline(np.mean(caumass*1),ymin=.8,color='c',lw=1.5)
+			p4 = ax.axvline(astStats.biweightLocation(caumass*1,6.0),ymin=.8,color='r',lw=1.5)
+			ax.legend([p1,p2,p3,p4],["Table Mass","Median","Mean","biweightLocation"],fontsize=8)
 
 
 
 ## Initialize Classes
 R = Recover()
 W = Work(Recover)
+
+
+work = False
+if work == True:
+	W.load_all()
+	data=(ENS_MBIAS,ENS_MSCAT,ENS_VBIAS,ENS_VSCAT,LOS_MBIAS,LOS_MSCAT,LOS_VBIAS,LOS_VSCAT,RUN_NUM,GAL_NUM,LINE_NUM,RICH_NUM)
+	file = open('table_analysis_10halo.pkl','wb')
+	output = pkl.Pickler(file)
+	output.dump(data)
 
 
 

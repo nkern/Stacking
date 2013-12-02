@@ -56,13 +56,13 @@ if len(sys.argv) == 6:				# If you feed the run with parameters
 	clus_num	= int(sys.argv[2])	# Number of Clusters to Solve for in this run
 	gal_num		= int(sys.argv[3])	# Number of galaxies taken per line of sight
 	line_num	= int(sys.argv[4])	# Number of lines of sight to stack over
-	cell_num	= int(sys.argv[5])	# Cell Number ID corresponding to given gal_num & line_num geometry in a Run Table
+	cell_num	= sys.argv[5]		# Cell Number ID corresponding to given gal_num & line_num geometry in a Run Table
 else:
 	run_num		= 0
 	clus_num	= 1
 	gal_num		= 10
 	line_num	= 10
-	cell_num	= 0
+	cell_num	= '0'
 
 if use_flux == True: 
 	root=str('/nfs/christoq_ls')	# Change directory scheme if using flux or sophie

@@ -241,7 +241,6 @@ class universal:
 		print "clus_num		=",varib['clus_num']
 		print "gal_num			=",varib['gal_num']
 		print "line_num		=",varib['line_num']
-		print "cell_num		=",varib['cell_num']
 		print "halo_num		=",varib['halo_num']
 		print "method_num		=",varib['method_num']
 		print "data_loc		=",varib['data_loc']
