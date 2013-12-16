@@ -15,6 +15,7 @@ from AttrDict import AttrDict
 import os.path
 from caustic_universal_stack2D import universal
 import warnings
+import scipy as sc
 
 ## Flags ##
 use_flux	= True				# Running on flux or sophie?
@@ -214,8 +215,8 @@ class Recover():
 			maLOS_HVD	= ma.masked_array(LOS_HVD_EST,mask=LOS_HVD_EST<epsilon)			
 	
 		# Ensemble Mass Fraction Arrays after taking logarithm. 
-		ens_mfrac = ma.log(maENS_CAUMASS/M_crit200)
-		ens_vfrac = ma.log(maENS_HVD/HVD)
+		ens_mfrac = ma.log(ma.compressed(maENS_CAUMASS/M_crit200))
+		ens_vfrac = ma.log(ma.compressed(maENS_HVD/HVD))
 
 		# LOS Mass Fraction Arrays
 		array_size = halo_range.size	# halo_range.size for horizontal avg first, line_num for vertical avg first. See sites page
@@ -223,17 +224,17 @@ class Recover():
 		for a in range(array_size):
 			# biweightLocation takes only arrays with 4 or more elements
 			if len(ma.compressed(maLOS_CAUMASS[a])) > 4:
-				los_mfrac = np.append( los_mfrac, astStats.biweightLocation( ma.compressed(np.log(maLOS_CAUMASS[a]/M_crit200[a])),6.0 )	)
-				los_vfrac = np.append( los_vfrac, astStats.biweightLocation( ma.compressed(np.log(maLOS_HVD[a]/HVD[a])),6.0 )		)
+				los_mfrac = np.append( los_mfrac, astStats.biweightLocation( np.log( ma.compressed(maLOS_CAUMASS[a]/M_crit200[a])),6.0 )	)
+				los_vfrac = np.append( los_vfrac, astStats.biweightLocation( np.log( ma.compressed(maLOS_HVD[a]/HVD[a])),6.0 )		)
 			else:
 				los_mfrac = np.append( los_mfrac, ma.median( ma.log(maLOS_CAUMASS[a]/M_crit200[a]) )	)
 				los_vfrac = np.append( los_vfrac, ma.median( ma.log(maLOS_HVD[a]/HVD[a]) )		)
 
 		# Bias and Scatter Calculation
-		ens_mbias,ens_mscat = astStats.biweightLocation(ma.compressed(ens_mfrac),6.0),astStats.biweightScale(ma.compressed(ens_mfrac),9.0)
-		los_mbias,los_mscat = astStats.biweightLocation(ma.compressed(los_mfrac),6.0),astStats.biweightScale(ma.compressed(los_mfrac),9.0)
-		ens_vbias,ens_vscat = astStats.biweightLocation(ma.compressed(ens_vfrac),6.0),astStats.biweightScale(ma.compressed(ens_vfrac),9.0)
-		los_vbias,los_vscat = astStats.biweightLocation(ma.compressed(los_vfrac),6.0),astStats.biweightScale(ma.compressed(los_vfrac),9.0)
+		ens_mbias,ens_mscat = astStats.biweightLocation(ens_mfrac,6.0),astStats.biweightScale(ma.compressed(ens_mfrac),9.0)
+		los_mbias,los_mscat = astStats.biweightLocation(los_mfrac,6.0),astStats.biweightScale(ma.compressed(los_mfrac),9.0)
+		ens_vbias,ens_vscat = astStats.biweightLocation(ens_vfrac,6.0),astStats.biweightScale(ma.compressed(ens_vfrac),9.0)
+		los_vbias,los_vscat = astStats.biweightLocation(los_vfrac,6.0),astStats.biweightScale(ma.compressed(los_vfrac),9.0)
 
 		# Extra Arrays
 		avgLOS_CAUMASS = np.array(map(np.median,maLOS_CAUMASS))
@@ -348,11 +349,9 @@ class Work(Recover):
 			ax.legend([p1,p2,p3,p4],["Table Mass","Median","Mean","biweightLocation"],fontsize=8)
 
 
-
 ## Initialize Classes
 R = Recover()
 W = Work(Recover)
-
 
 work = False
 if work == True:
@@ -361,6 +360,5 @@ if work == True:
 	file = open('table_analysis_10halo.pkl','wb')
 	output = pkl.Pickler(file)
 	output.dump(data)
-
 
 

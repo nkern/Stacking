@@ -107,6 +107,8 @@ Gal_P2 = []
 for [i,j] in zip(np.arange(clus_num),stack_num):
 	Gal_P2.append((Gal_P[i].T-Halo_P[j]).T)
 
+raise NameError
+
 ## Run Code! 
 U.print_separation('# ...Starting Ensemble Loop',type=2)
 # Initialize Multi Halo Array to hold resultant data

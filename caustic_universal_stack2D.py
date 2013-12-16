@@ -134,11 +134,17 @@ class universal:
 
 	def pick_pos(self,distance):
 	        '''Picks a random position for the observer a given distance away from the center'''
-		x = random.uniform(-1,1)
-		y = random.uniform(-1,1)
-		z = random.uniform(-1,1)
+		theta = random.normal(np.pi/2,np.pi/4)
+		phi = random.uniform(0,2*np.pi)
+		x = np.sin(theta)*np.cos(phi)
+		y = np.sin(theta)*np.sin(phi)
+		z = np.cos(theta)
+		
+	#	x = random.uniform(-1,1)
+	#	y = random.uniform(-1,1)
+	#	z = random.uniform(-1,1)
 		unit = np.array([x,y,z])/(x**2+y**2+z**2)**(.5)
-		# move the position randomly 'distance' Mpc away
+		# move the position a random 'distance' Mpc away
 	        return distance*unit
 
 	def line_of_sight(self,gal_p,gal_v,halo_p,halo_v):
