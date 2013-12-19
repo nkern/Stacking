@@ -33,7 +33,7 @@ use_flux	= True				# Using Flux if True, using Sophie if False
 write_data 	= True				# Write Data to Result directories if True
 light_cone	= False				# Input RA|DEC projection data if True, if False inputting x,y,z 3D data
 clean_ens	= False				# Do an extra shiftgapper on ensemble before the lines of sight get stacked.
-small_set	= False				# 100 Halo Set or 2000 Halo Set
+small_set	= True				# 100 Halo Set or 2000 Halo Set
 
 ## CONSTANTS ##
 c 		= 2.99792e5			# speed of light in km/s
@@ -45,8 +45,8 @@ fbeta		= 0.65				# fbeta value, see 'Diaferio 1999'
 r_limit 	= 1.5				# Radius Cut Scaled by R200
 v_limit		= 3500.0			# Velocity Cut in km/s
 data_set	= 'Guo30_2'			# Data set to draw semi analytic data from
-data_loc	= 'selfstack_30cell_run_table'	# Parent Directory where write_loc directories live
-halo_num	= 2124				# Total number of halos loaded
+data_loc	= 'Halo_Shape'			# Parent Directory where write_loc directories live
+halo_num	= 100				# Total number of halos loaded
 method_num	= 1				# Build Ensemble Method Number
 run_time	= time.asctime()		# Time when program was started
 
@@ -70,7 +70,7 @@ else:
 	root=str('/n/Christoq1')
 
 if self_stack == True:							# Change Write Directory Depending on Parameters
-	write_loc = 'ss_m'+str(method_num)+'_run'+str(cell_num)		# Self Stack data-write location
+	write_loc = 'ss_m'+str(method_num)+'_run'+str(cell_num)+'_maj'	# Self Stack data-write location
 else:
 	write_loc = 'bs_m'+str(method_num)+'_run'+str(run_num)		# Bin Stack data-write location
 
@@ -106,8 +106,6 @@ Halo_P,Halo_V,Gal_P,Gal_V,G_Mags,R_Mags,I_Mags,HaloData = U.configure_galaxies(H
 Gal_P2 = []
 for [i,j] in zip(np.arange(clus_num),stack_num):
 	Gal_P2.append((Gal_P[i].T-Halo_P[j]).T)
-
-raise NameError
 
 ## Run Code! 
 U.print_separation('# ...Starting Ensemble Loop',type=2)

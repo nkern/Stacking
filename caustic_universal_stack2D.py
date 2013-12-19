@@ -16,6 +16,9 @@ from scipy import weave
 from scipy.weave import converters
 import cosmolopy.distance as cd
 import time
+from numpy import random
+from scipy.linalg import norm
+import cPickle as pkl
 
 ## Program ##
 
@@ -61,6 +64,7 @@ class universal:
 		M_crit200 = M_crit200[sort]
 		R_crit200 = R_crit200[sort]
 		Z = Z[sort]
+
 		SRAD = SRAD[sort]
 		ESRAD = ESRAD[sort]
 		HVD = HVD[sort]
@@ -113,6 +117,7 @@ class universal:
 		else:
 			# 2,000 Halo Sample
 			data = pyfits.getdata(self.root+'/nkern/Millennium/Large_Halo_Set/Halo_'+str(haloid)+'.Guo2010.fits')
+
 			gal_z,gpx,gpy,gpz,gvx,gvy,gvz,gmags,rmags,imags = data.field(3),data.field(6),data.field(7),data.field(8),data.field(9),data.field(10),data.field(11),data.field(14),data.field(15),data.field(16)
 
 		# Cosmology corrections
@@ -132,25 +137,61 @@ class universal:
 		v /= hvd
 		return r, v
 
-	def pick_pos(self,distance):
+	def rand_pos(self,distance):
 	        '''Picks a random position for the observer a given distance away from the center'''
 		theta = random.normal(np.pi/2,np.pi/4)
 		phi = random.uniform(0,2*np.pi)
 		x = np.sin(theta)*np.cos(phi)
 		y = np.sin(theta)*np.sin(phi)
 		z = np.cos(theta)
-		
-	#	x = random.uniform(-1,1)
-	#	y = random.uniform(-1,1)
-	#	z = random.uniform(-1,1)
+	
 		unit = np.array([x,y,z])/(x**2+y**2+z**2)**(.5)
 		# move the position a random 'distance' Mpc away
 	        return distance*unit
 
-	def line_of_sight(self,gal_p,gal_v,halo_p,halo_v):
+
+	def def_pos(self,distance,k):
+		major_axis = True		# Project along major or minor axes?
+
+		# Load Ellipticity Data for 100 Halos
+		pkl_file = open(self.root+'/nkern/Stacking/Halo_Shape/100_halo_ellipticities.pkl','rb')
+		input = pkl.Unpickler(pkl_file)
+		d = input.load()
+		eig_vec = d['eig_vec']
+		eig_val = d['eig_val']
+
+		# Define theta and phi for unit vector and construt unit vector in cartesian coordinates
+		if major_axis == True:
+			eig_vec = eig_vec[k][0]
+			r = norm(eig_vec)
+			theta = np.arccos(eig_vec[2]/r)
+			phi = np.arctan(eig_vec[1]/eig_vec[0])
+
+		if major_axis == False:
+			eig_vec = eig_vec[k][1]
+			r = norm(eig_vec)
+			theta = np.arccos(eig_vec[2]/r)
+			phi = np.arctan(eig_vec[1]/eig_vec[0])
+
+		if random.random()<.5:
+			eig_vec *= -1.
+
+		theta = random.normal(theta,.075)
+		phi = random.normal(phi,.075)
+		x = np.sin(theta)*np.cos(phi)
+		y = np.sin(theta)*np.sin(phi)
+		z = np.cos(theta)	
+
+		unit = np.array([x,y,z])/norm(np.array([x,y,z]))
+		return unit*distance	
+
+
+
+
+	def line_of_sight(self,gal_p,gal_v,halo_p,halo_v,k):
 		'''Line of Sight Calculations to mock projected data, if given 3D data'''
 		# Pick Position
-		new_pos = self.pick_pos(30)
+		new_pos = self.def_pos(30,k)
 		new_pos += halo_p 
 
 		# New Halo Information

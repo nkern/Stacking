@@ -112,7 +112,7 @@ class selfstack:
 				pass
 			else:
 				# Line of Sight Calculation for naturally 3D data
-				r, v, projected_pos = self.U.line_of_sight(Gal_P[j],Gal_V[j],Halo_P[k],Halo_V[k])
+				r, v, projected_pos = self.U.line_of_sight(Gal_P[j],Gal_V[j],Halo_P[k],Halo_V[k],k)
 
 			# Limit Data in Phase Space
 			r,v,gmags,rmags,imags,samp_size = self.U.limit_gals(r,v,G_Mags[j],R_Mags[j],I_Mags[j],R_crit200[k],HVD[k])
