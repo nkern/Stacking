@@ -173,8 +173,8 @@ class universal:
 			theta = np.arccos(eig_vec[2]/r)
 			phi = np.arctan(eig_vec[1]/eig_vec[0])
 
-		if random.random()<.5:
-			eig_vec *= -1.
+	#	if random.random()<.5:
+	#		eig_vec *= -1.
 
 		theta = random.normal(theta,.075)
 		phi = random.normal(phi,.075)
@@ -191,7 +191,7 @@ class universal:
 	def line_of_sight(self,gal_p,gal_v,halo_p,halo_v,k):
 		'''Line of Sight Calculations to mock projected data, if given 3D data'''
 		# Pick Position
-		new_pos = self.def_pos(30,k)
+		new_pos = self.rand_pos(30)
 		new_pos += halo_p 
 
 		# New Halo Information

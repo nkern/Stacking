@@ -747,6 +747,9 @@ class MassCalc:
         finterp = interp1d(ri[:self.f_beta.size],self.massprofile)
         self.M200_est = finterp(self.r200_est)
         self.M200 = self.massprofile[np.where(ri[:self.f_beta.size] <= r200)[0][-1]]
+
+	# Interpolation method 
+	#self.M200 = finterp(r200)
             
 
         

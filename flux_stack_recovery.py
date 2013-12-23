@@ -16,11 +16,12 @@ import os.path
 from caustic_universal_stack2D import universal
 import warnings
 import scipy as sc
+from numpy import random
 
 ## Flags ##
 use_flux	= True				# Running on flux or sophie?
 get_los		= True				# Upload Line of Sight Data as well?
-data_loc	= 'selfstack_30cell_run_table'	# Parent directory where write_loc lives
+data_loc	= 'selfstack_run_table'		# Parent directory where write_loc lives
 write_loc	= 'ss_m1_run1'			# Which directory within data_loc to load ensembles from?
 
 if use_flux == True:
@@ -240,8 +241,8 @@ class Recover():
 		avgLOS_CAUMASS = np.array(map(np.median,maLOS_CAUMASS))
 
 		# Return to Namespaces depending on go_global
-		names = ['varib','HaloID','Halo_P','Halo_V','GPX3D','GPY3D','GPZ3D','GVX3D','GVY3D','GVZ3D','M_crit200','R_crit200','Z','SRAD','ESRAD','HVD','x_range','ENS_CAUMASS','ENS_CAUMASS_EST','ENS_CAUSURF','ENS_NFWSURF','LOS_CAUMASS','LOS_CAUMASS_EST','LOS_CAUSURF','LOS_NFWSURF','ENS_R','ENS_V','ENS_GMAGS','ENS_RMAGS','ENS_IMAGS','LOS_R','LOS_V','LOS_GMAGS','LOS_RMAGS','LOS_IMAGS','ENS_HVD','LOS_HVD','SAMS','PRO_POS','ens_mbias','ens_mscat','los_mbias','los_mscat','ens_vbias','ens_vscat','los_vbias','los_vscat','maLOS_CAUMASS','maLOS_HVD','avgLOS_CAUMASS','ens_mfrac','ens_vfrac','los_mfrac','los_vfrac']
-		data = [varib,HaloID,Halo_P,Halo_V,GPX3D,GPY3D,GPZ3D,GVX3D,GVY3D,GVZ3D,M_crit200,R_crit200,Z,SRAD,ESRAD,HVD,x_range,ENS_CAUMASS,ENS_CAUMASS_EST,ENS_CAUSURF,ENS_NFWSURF,LOS_CAUMASS,LOS_CAUMASS_EST,LOS_CAUSURF,LOS_NFWSURF,ENS_R,ENS_V,ENS_GMAGS,ENS_RMAGS,ENS_IMAGS,LOS_R,LOS_V,LOS_GMAGS,LOS_RMAGS,LOS_IMAGS,ENS_HVD,LOS_HVD,SAMS,PRO_POS,ens_mbias,ens_mscat,los_mbias,los_mscat,ens_vbias,ens_vscat,los_vbias,los_vscat,maLOS_CAUMASS,maLOS_HVD,avgLOS_CAUMASS,ens_mfrac,ens_vfrac,los_mfrac,los_vfrac]
+		names = ['varib','HaloID','Halo_P','Halo_V','GPX3D','GPY3D','GPZ3D','GVX3D','GVY3D','GVZ3D','M_crit200','R_crit200','Z','SRAD','ESRAD','HVD','x_range','ENS_CAUMASS','ENS_CAUMASS_EST','ENS_CAUSURF','ENS_NFWSURF','LOS_CAUMASS','LOS_CAUMASS_EST','LOS_CAUSURF','LOS_NFWSURF','ENS_R','ENS_V','ENS_GMAGS','ENS_RMAGS','ENS_IMAGS','LOS_R','LOS_V','LOS_GMAGS','LOS_RMAGS','LOS_IMAGS','ENS_HVD','LOS_HVD','SAMS','PRO_POS','ens_mbias','ens_mscat','los_mbias','los_mscat','ens_vbias','ens_vscat','los_vbias','los_vscat','maENS_CAUMASS','maENS_HVD','maLOS_CAUMASS','maLOS_HVD','avgLOS_CAUMASS','ens_mfrac','ens_vfrac','los_mfrac','los_vfrac']
+		data = [varib,HaloID,Halo_P,Halo_V,GPX3D,GPY3D,GPZ3D,GVX3D,GVY3D,GVZ3D,M_crit200,R_crit200,Z,SRAD,ESRAD,HVD,x_range,ENS_CAUMASS,ENS_CAUMASS_EST,ENS_CAUSURF,ENS_NFWSURF,LOS_CAUMASS,LOS_CAUMASS_EST,LOS_CAUSURF,LOS_NFWSURF,ENS_R,ENS_V,ENS_GMAGS,ENS_RMAGS,ENS_IMAGS,LOS_R,LOS_V,LOS_GMAGS,LOS_RMAGS,LOS_IMAGS,ENS_HVD,LOS_HVD,SAMS,PRO_POS,ens_mbias,ens_mscat,los_mbias,los_mscat,ens_vbias,ens_vscat,los_vbias,los_vscat,maENS_CAUMASS,maENS_HVD,maLOS_CAUMASS,maLOS_HVD,avgLOS_CAUMASS,ens_mfrac,ens_vfrac,los_mfrac,los_vfrac]
 		mydict = dict( zip(names,data) )
 		if go_global == True:
 			globals().update(mydict)
@@ -360,5 +361,49 @@ if work == True:
 	file = open('table_analysis_10halo.pkl','wb')
 	output = pkl.Pickler(file)
 	output.dump(data)
+
+
+## Histogram Plots
+'''
+## Configure LOS_CAUMASS data
+LOS_MFRAC = []
+for i in range(2124):
+	LOS_MFRAC.extend(ma.compressed(maLOS_CAUMASS[i])/M_crit200[i])
+LOS_MFRAC = np.array(LOS_MFRAC)
+
+## Mass Fraction Histrogram
+fig = mp.figure()
+ax = fig.add_subplot(111)
+hdat2 = ax.hist(LOS_MFRAC,normed=True,range=(0,2),bins=100,color='DarkRed',alpha=.5)
+hdat1 = ax.hist(ma.compressed(maENS_CAUMASS/M_crit200),normed=True,range=(0,2),bins=100,color='DarkBlue',alpha=.5)
+p1 = ax.axvline(1.0,ymin=.9,color='k')
+p2 = ax.axvline(astStats.biweightLocation(ma.compressed(maENS_CAUMASS/M_crit200),6.0),ymin=.9,color='b')
+p3 = ax.axvline(astStats.biweightLocation(LOS_MFRAC,6.0),ymin=.9,color='r')
+ax.legend([p1,p2,p3],["Zero Bias","BiWeight of ENS","BiWeight of LOS"])
+ax.set_title('Ensemble Mass Fractions and LOS Mass Fractions for N='+str(varib['gal_num'])+',LOS='+str(varib['line_num'])+'',fontsize=12)
+ax.set_xlabel('Mass Estimate Fraction Over Table M200',fontsize=14)
+mp.show()
+
+
+'''
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
