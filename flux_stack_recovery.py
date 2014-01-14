@@ -266,7 +266,7 @@ class Work(Recover):
 		''' This function was created so as to reclaim the mydict dictionary memory after exiting the function.'''
 		
 		# Load in Data from Run Table and append
-		mydict = self.ss_recover(write_loc=write_loc,halo_range=np.arange(10),go_global=False)
+		mydict = self.ss_recover(write_loc=write_loc,halo_range=np.arange(2124),go_global=False)
 		d = AttrDict(mydict)
 		RUN_NUM.append(i)
 		GAL_NUM.append(d.varib['gal_num'])
@@ -290,8 +290,8 @@ class Work(Recover):
 
 		# Configure Variables
 		if iter_array == None:
-			iter_array = np.arange(1,36)
-			tab_shape = (5,7)
+			iter_array = np.arange(1,50)
+			tab_shape = (7,7)
 
 		# Define globals
 		global ENS_MBIAS,ENS_MSCAT,ENS_VBIAS,ENS_VSCAT,LOS_MBIAS,LOS_MSCAT,LOS_VBIAS,LOS_VSCAT
@@ -358,7 +358,7 @@ work = False
 if work == True:
 	W.load_all()
 	data=(ENS_MBIAS,ENS_MSCAT,ENS_VBIAS,ENS_VSCAT,LOS_MBIAS,LOS_MSCAT,LOS_VBIAS,LOS_VSCAT,RUN_NUM,GAL_NUM,LINE_NUM,RICH_NUM)
-	file = open('table_analysis_10halo.pkl','wb')
+	file = open('extended_table_analysis_2124halo.pkl','wb')
 	output = pkl.Pickler(file)
 	output.dump(data)
 
@@ -386,16 +386,6 @@ mp.show()
 
 
 '''
-
-
-
-
-
-
-
-
-
-
 
 
 
