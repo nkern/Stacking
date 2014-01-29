@@ -40,7 +40,8 @@ class Recover():
 	def __init__(self):
 		pass
 
-	def ss_recover(self,write_loc=write_loc,raw_data=False,halo_range=np.arange(2124),go_global=True):
+
+	def recover(self,write_loc=write_loc,raw_data=False,ss=True,go_global=True):
 		"""
 		This function uploads the pickle files from directory stack_data and configures them into multi dimensional arrays.
 		It is meant to work with the self-stacked ensembles.
@@ -60,11 +61,15 @@ class Recover():
 		SAMS,PRO_POS,GPX3D,GPY3D,GPZ3D,GVX3D,GVY3D,GVZ3D = [],[],[],[],[],[],[],[]
 
 		# Initialization step 
-		pkl_file = open(root+'/nkern/Stacking/'+data_loc+'/'+write_loc+'/Ensemble_'+str(halo_range[0])+'_Data.pkl','rb')
-		input = pkl.Unpickler(pkl_file)
+		if ss:	data_loc = 'selfstack_run_table'
+		else:	data_loc = 'binstack_run_table'
 
+		pkl_file = open(root+'/nkern/Stacking/'+data_loc+'/'+write_loc+'/Ensemble_'+str(1)+'_Data.pkl','rb')
+		input = pkl.Unpickler(pkl_file)
 		stack_data 			= input.load()
 		varib				= input.load()
+		if ss:	halo_range = range(2124)
+		else:	halo_range = range(varib['halo_num']/varib['line_num'])
 
 		ens_r,ens_v,ens_gmags,ens_rmags,ens_imags,ens_hvd,ens_caumass,ens_caumass_est,ens_causurf,ens_nfwsurf,los_r,los_v,los_gmags,los_rmags,los_imags,los_hvd,los_caumass,los_caumass_est,los_causurf,los_nfwsurf,x_range,sample_size,pro_pos,gpx3d,gpy3d,gpz3d,gvx3d,gvy3d,gvz3d = stack_data
 
@@ -110,7 +115,240 @@ class Recover():
 			stack_data = input.load()
 
 			# Unpack Variables
-			ens_r,ens_v,ens_gmags,ens_rmags,ens_imags,ens_hvd,ens_caumass,ens_caumass_est,ens_causurf,ens_nfwsurf,los_r,los_v,los_gmags,los_rmags,los_imags,los_hvd,los_caumass,los_caumass_est,los_causurf,los_nfwsurf,x_range,sample_size,pro_pos,gpx3d,gpy3d,gpz3d,gvx3d,gvy3d,gvz3d  = stack_data
+			ens_r,ens_v,ens_gmags,ens_rmags,ens_imags,ens_hvd,ens_caumass,ens_caumass_est,ens_causurf,ens_nfwsurf,los_r,los_v,los_gmags,los_rmags,los_imags,los_hvd,los_caumass,los_caumass_est,los_causurf,los_nfwsurf,x_range,sample_size,pro_pos,gpx3d,gpy3d,gpz3d,gvx3d,gvy3d,gvz3d = stack_data
+
+			# Append stack_data to major lists
+			ENS_R.append(ens_r)
+			ENS_V.append(ens_v)
+			ENS_GMAGS.append(ens_gmags)
+			ENS_RMAGS.append(ens_rmags)
+			ENS_IMAGS.append(ens_imags)
+			ENS_HVD.append(float(ens_hvd))
+			ENS_CAUMASS.append(float(ens_caumass))
+			ENS_CAUMASS_EST.append(float(ens_caumass_est))
+			ENS_CAUSURF.append(ens_causurf)
+			ENS_NFWSURF.append(ens_nfwsurf)
+			LOS_R.append(los_r)
+			LOS_V.append(los_v)
+			LOS_GMAGS.append(los_gmags)
+			LOS_RMAGS.append(los_rmags)
+			LOS_IMAGS.append(los_imags)
+			LOS_HVD.append(los_hvd)
+			LOS_CAUMASS.append(los_caumass)
+			LOS_CAUMASS_EST.append(los_caumass_est)
+			LOS_CAUSURF.append(los_causurf)
+			LOS_NFWSURF.append(los_nfwsurf)
+			SAMS.append(sample_size)
+			PRO_POS.append(pro_pos)
+			GPX3D.append(gpx3d)
+			GPY3D.append(gpy3d)
+			GPZ3D.append(gpz3d)
+			GVX3D.append(gvx3d)
+			GVY3D.append(gvy3d)
+			GVZ3D.append(gvz3d)
+
+		print ''
+
+		# Convert to arrays
+		ENS_R = np.array(ENS_R)
+		ENS_V = np.array(ENS_V)
+		ENS_GMAGS = np.array(ENS_GMAGS)
+		ENS_RMAGS = np.array(ENS_RMAGS)
+		ENS_IMAGS = np.array(ENS_IMAGS)
+		ENS_HVD = np.array(ENS_HVD)
+		ENS_CAUMASS = np.array(ENS_CAUMASS)
+		ENS_CAUMASS_EST = np.array(ENS_CAUMASS_EST)
+		ENS_CAUSURF = np.array(ENS_CAUSURF)
+		ENS_NFWSURF = np.array(ENS_NFWSURF)
+		LOS_R = np.array(LOS_R)
+		LOS_V = np.array(LOS_V)
+		LOS_GMAGS = np.array(LOS_GMAGS)
+		LOS_RMAGS = np.array(LOS_RMAGS)
+		LOS_IMAGS = np.array(LOS_IMAGS)
+		LOS_HVD = np.array(LOS_HVD)
+		LOS_CAUMASS = np.array(LOS_CAUMASS)
+		LOS_CAUMASS_EST = np.array(LOS_CAUMASS_EST)
+		LOS_CAUSURF = np.array(LOS_CAUSURF)
+		LOS_NFWSURF = np.array(LOS_NFWSURF)
+		SAMS = np.array(SAMS)
+		PRO_POS = np.array(PRO_POS)
+		GPX3D = np.array(GPX3D)
+		GPY3D = np.array(GPY3D)
+		GPZ3D = np.array(GPZ3D)
+		GVX3D = np.array(GVX3D)
+		GVY3D = np.array(GVY3D)
+		GVZ3D = np.array(GVZ3D)
+
+		## Get Halo Data
+		# Initialize universal class
+		self.U = universal(varib)
+		# Load and Sort Halos by Mass
+		HaloID,HaloData = self.U.load_halos()
+		HaloID,HaloData = self.U.sort_halos(HaloID,HaloData)
+		HaloID,M_crit200,R_crit200,Z,SRAD,ESRAD,HVD,HPX,HPY,HPZ,HVX,HVY,HVZ = np.vstack((HaloID,HaloData))
+		HaloID = np.array(HaloID,int)
+		# Build Halo_P, Halo_V
+		Halo_P = np.vstack([HPX,HPY,HPZ])
+		Halo_V = np.vstack([HVX,HVY,HVZ])
+
+		if raw_data == True:
+			# Return to Namespaces depending on go_global
+			names = ['varib','HaloID','Halo_P','Halo_V','GPX3D','GPY3D','GPZ3D','GVX3D','GVY3D','GVZ3D','M_crit200','R_crit200','Z','SRAD','ESRAD','HVD','x_range','ENS_CAUMASS','ENS_CAUMASS_EST','ENS_CAUSURF','ENS_NFWSURF','LOS_CAUMASS','LOS_CAUMASS_EST','LOS_CAUSURF','LOS_NFWSURF','ENS_R','ENS_V','ENS_GMAGS','ENS_RMAGS','ENS_IMAGS','LOS_R','LOS_V','LOS_GMAGS','LOS_RMAGS','LOS_IMAGS','ENS_HVD','LOS_HVD','SAMS','PRO_POS']
+			data = [varib,HaloID,Halo_P,Halo_V,GPX3D,GPY3D,GPZ3D,GVX3D,GVY3D,GVZ3D,M_crit200,R_crit200,Z,SRAD,ESRAD,HVD,x_range,ENS_CAUMASS,ENS_CAUMASS_EST,ENS_CAUSURF,ENS_NFWSURF,LOS_CAUMASS,LOS_CAUMASS_EST,LOS_CAUSURF,LOS_NFWSURF,ENS_R,ENS_V,ENS_GMAGS,ENS_RMAGS,ENS_IMAGS,LOS_R,LOS_V,LOS_GMAGS,LOS_RMAGS,LOS_IMAGS,ENS_HVD,LOS_HVD,SAMS,PRO_POS]
+			mydict = dict( zip(names,data) )
+			if go_global == True:
+				globals().update(mydict)
+				return
+			elif go_global == False:
+				return  mydict	
+
+		################################
+		### Statistical Calculations ###
+		################################
+
+		# Define a Masked array for sometimes zero terms
+		epsilon = 10.0
+		use_est = False				# Use MassCalc estimated r200 mass values if true 
+		if use_est == False:
+			maENS_CAUMASS	= ma.masked_array(ENS_CAUMASS,mask=ENS_CAUMASS<epsilon)		# Mask essentially zero values
+			maENS_HVD	= ma.masked_array(ENS_HVD,mask=ENS_HVD<epsilon)
+			maLOS_CAUMASS	= ma.masked_array(LOS_CAUMASS,mask=LOS_CAUMASS<epsilon)		
+			maLOS_HVD	= ma.masked_array(LOS_HVD,mask=LOS_HVD<epsilon)
+		else:
+			maENS_CAUMASS	= ma.masked_array(ENS_CAUMASS_EST,mask=ENS_CAUMASS_EST<epsilon)	# Mask essentially zero values
+			maENS_HVD	= ma.masked_array(ENS_HVD_EST,mask=ENS_HVD_EST<epsilon)
+			maLOS_CAUMASS	= ma.masked_array(LOS_CAUMASS_EST,mask=LOS_CAUMASS_EST<epsilon)	
+			maLOS_HVD	= ma.masked_array(LOS_HVD_EST,mask=LOS_HVD_EST<epsilon)			
+	
+		# Ensemble Mass Fraction Arrays after taking logarithm. 
+		ENS_MFRAC = np.log(ma.compressed(maENS_CAUMASS/M_crit200))
+		ENS_VFRAC = np.log(ma.compressed(maENS_HVD/HVD))
+
+		# LOS Mass Fraction Arrays: 0th axis is halo number, 1st axis is line of sight number
+		LOS_MFRAC,LOS_VFRAC = [],[]
+		for a in halo_range:
+			LOS_MFRAC.append( ma.log( maLOS_CAUMASS[a]/M_crit200[a] ) )
+			LOS_VFRAC.append( ma.log( maLOS_HVD[a]/HVD[a] ) )
+
+		LOS_MFRAC,LOS_VFRAC = np.array(LOS_MFRAC),np.array(LOS_VFRAC)
+
+		# Create vertically averaged (by halo averaged) arrays, with line_num elements
+		# biweightLocation takes only arrays with 4 or more elements
+		HORZ_LOS_MFRAC,HORZ_LOS_VFRAC = [],[]
+		VERT_LOS_MFRAC,VERT_LOS_VFRAC = [],[]
+		for a in range(varib['line_num']):
+			if len(ma.compressed(maLOS_CAUMASS[a])) > 4:
+				VERT_LOS_MFRAC.append( astStats.biweightLocation( ma.compressed( LOS_MFRAC[:,a] ), 6.0 ) )
+				VERT_LOS_VFRAC.append( astStats.biweightLocation( ma.compressed( LOS_VFRAC[:,a] ), 6.0 ) )
+
+			else:
+				VERT_LOS_MFRAC.append( np.median( ma.compressed( LOS_MFRAC[:,a] ) ) )
+				VERT_LOS_VFRAC.append( np.median( ma.compressed( LOS_VFRAC[:,a] ) ) )
+		VERT_LOS_MFRAC,VERT_LOS_VFRAC = np.array(VERT_LOS_MFRAC),np.array(VERT_LOS_VFRAC)
+		
+		# Create horizontally averaged (by line of sight) arrays, with halo_num elements
+		for a in halo_range:
+			if len(ma.compressed(maLOS_CAUMASS[a])) > 4:
+				HORZ_LOS_MFRAC.append( astStats.biweightLocation( ma.compressed( LOS_MFRAC[a] ), 6.0 ) )
+				HORZ_LOS_VFRAC.append( astStats.biweightLocation( ma.compressed( LOS_VFRAC[a] ), 6.0 ) )
+			else:
+				HORZ_LOS_MFRAC.append( np.median( ma.compressed( LOS_MFRAC[a] ) ) )
+				HORZ_LOS_VFRAC.append( np.median( ma.compressed( LOS_VFRAC[a] ) ) )
+		HORZ_LOS_MFRAC,HORZ_LOS_VFRAC = np.array(HORZ_LOS_MFRAC),np.array(HORZ_LOS_VFRAC)
+
+		# Bias and Scatter Calculations, LOS bias and scatter taken from vertically averaged arrays
+		ens_mbias,ens_mscat = astStats.biweightLocation(ENS_MFRAC,6.0),astStats.biweightScale(ENS_MFRAC,9.0)
+		los_mbias,los_mscat = astStats.biweightLocation(VERT_LOS_MFRAC,6.0),astStats.biweightScale(VERT_LOS_MFRAC,9.0)
+	#	los_mbias_err = astStats.biweightScale
+
+		ens_vbias,ens_vscat = astStats.biweightLocation(ENS_VFRAC,6.0),astStats.biweightScale(ENS_VFRAC,9.0)
+		los_vbias,los_vscat = astStats.biweightLocation(VERT_LOS_VFRAC,6.0),astStats.biweightScale(VERT_LOS_VFRAC,9.0)
+
+		# Return to Namespaces depending on go_global
+		names = ['varib','HaloID','Halo_P','Halo_V','GPX3D','GPY3D','GPZ3D','GVX3D','GVY3D','GVZ3D','M_crit200','R_crit200','Z','SRAD','ESRAD','HVD','x_range','ENS_CAUMASS','ENS_CAUMASS_EST','ENS_CAUSURF','ENS_NFWSURF','LOS_CAUMASS','LOS_CAUMASS_EST','LOS_CAUSURF','LOS_NFWSURF','ENS_R','ENS_V','ENS_GMAGS','ENS_RMAGS','ENS_IMAGS','LOS_R','LOS_V','LOS_GMAGS','LOS_RMAGS','LOS_IMAGS','ENS_HVD','LOS_HVD','SAMS','PRO_POS','ens_mbias','ens_mscat','los_mbias','los_mscat','ens_vbias','ens_vscat','los_vbias','los_vscat','maENS_CAUMASS','maENS_HVD','maLOS_CAUMASS','maLOS_HVD','ENS_MFRAC','ENS_VFRAC','LOS_MFRAC','LOS_VFRAC','VERT_LOS_MFRAC','VERT_LOS_VFRAC','HORZ_LOS_MFRAC','HORZ_LOS_VFRAC']
+		data = [varib,HaloID,Halo_P,Halo_V,GPX3D,GPY3D,GPZ3D,GVX3D,GVY3D,GVZ3D,M_crit200,R_crit200,Z,SRAD,ESRAD,HVD,x_range,ENS_CAUMASS,ENS_CAUMASS_EST,ENS_CAUSURF,ENS_NFWSURF,LOS_CAUMASS,LOS_CAUMASS_EST,LOS_CAUSURF,LOS_NFWSURF,ENS_R,ENS_V,ENS_GMAGS,ENS_RMAGS,ENS_IMAGS,LOS_R,LOS_V,LOS_GMAGS,LOS_RMAGS,LOS_IMAGS,ENS_HVD,LOS_HVD,SAMS,PRO_POS,ens_mbias,ens_mscat,los_mbias,los_mscat,ens_vbias,ens_vscat,los_vbias,los_vscat,maENS_CAUMASS,maENS_HVD,maLOS_CAUMASS,maLOS_HVD,ENS_MFRAC,ENS_VFRAC,LOS_MFRAC,LOS_VFRAC,VERT_LOS_MFRAC,VERT_LOS_VFRAC,HORZ_LOS_MFRAC,HORZ_LOS_VFRAC]
+		mydict = dict( zip(names,data) )
+		if go_global == True:
+			globals().update(mydict)
+			return
+		elif go_global == False:
+			return  mydict	
+
+
+	def bs_recover(self,write_loc=write_loc,raw_data=False,go_global=True):
+		"""
+		This function uploads the pickle files from directory stack_data and configures them into multi dimensional arrays.
+		It is meant to work with the self-stacked ensembles.
+		go_global = True makes variables uploaded to global dictionary, False makes it returned to a dictionary
+		write_loc = place where data lives
+		raw_data: if True, output just mass estimates and caustic surfaces, no statistical calculations
+		"""
+		# For now, the "varib" dictionary and "HALODATA" array only need to be uploaded from one halo, say the first.
+		# However, we must loop over the ensemble data to combine the stack_data arrays.
+
+		## Load Data ##
+		# Make wanted variables global
+
+		# Create them as lists
+		ENS_CAUMASS,ENS_CAUMASS_EST,ENS_CAUSURF,ENS_NFWSURF,LOS_CAUMASS,LOS_CAUMASS_EST,LOS_CAUSURF,LOS_NFWSURF = [],[],[],[],[],[],[],[]
+		ENS_R,ENS_V,ENS_GMAGS,ENS_RMAGS,ENS_IMAGS,LOS_R,LOS_V,LOS_GMAGS,LOS_RMAGS,LOS_IMAGS,ENS_HVD,LOS_HVD = [],[],[],[],[],[],[],[],[],[],[],[]
+		SAMS,PRO_POS,GPX3D,GPY3D,GPZ3D,GVX3D,GVY3D,GVZ3D = [],[],[],[],[],[],[],[]
+
+		# Initialization step
+		data_loc = 'binstack_run_table'
+		pkl_file = open(root+'/nkern/Stacking/'+data_loc+'/'+write_loc+'/Ensemble_'+str(0)+'_Data.pkl','rb')
+		input = pkl.Unpickler(pkl_file)
+
+		stack_data 			= input.load()
+		varib				= input.load()
+
+		ens_r,ens_v,ens_gmags,ens_rmags,ens_imags,ens_hvd,ens_caumass,ens_caumass_est,ens_causurf,ens_nfwsurf,los_r,los_v,los_gmags,los_rmags,los_imags,los_hvd,los_caumass,los_caumass_est,los_causurf,los_nfwsurf,x_range,sample_size,pro_pos,gpx3d,gpy3d,gpz3d,gvx3d,gvy3d,gvz3d = stack_data.values()
+
+		halo_range = range(int(float(varib['halo_num'])/varib['line_num']))
+
+		# Append stack_data to major lists
+		ENS_R.append(ens_r)
+		ENS_V.append(ens_v)
+		ENS_GMAGS.append(ens_gmags)
+		ENS_RMAGS.append(ens_rmags)
+		ENS_IMAGS.append(ens_imags)
+		ENS_HVD.append(float(ens_hvd))
+		ENS_CAUMASS.append(float(ens_caumass))
+		ENS_CAUMASS_EST.append(float(ens_caumass_est))
+		ENS_CAUSURF.append(ens_causurf)
+		ENS_NFWSURF.append(ens_nfwsurf)
+		LOS_R.append(los_r)
+		LOS_V.append(los_v)
+		LOS_GMAGS.append(los_gmags)
+		LOS_RMAGS.append(los_rmags)
+		LOS_IMAGS.append(los_imags)
+		LOS_HVD.append(los_hvd)
+		LOS_CAUMASS.append(los_caumass)
+		LOS_CAUMASS_EST.append(los_caumass_est)
+		LOS_CAUSURF.append(los_causurf)
+		LOS_NFWSURF.append(los_nfwsurf)
+		SAMS.append(sample_size)
+		PRO_POS.append(pro_pos)
+		GPX3D.append(gpx3d)
+		GPY3D.append(gpy3d)
+		GPZ3D.append(gpz3d)
+		GVX3D.append(gvx3d)
+		GVY3D.append(gvy3d)
+		GVZ3D.append(gvz3d)
+
+		# Loop over ensembles
+		j = 0
+		for i in halo_range[1:]:
+			# Progress Bar
+			sys.stdout.write("Progress... "+str(j)+"\r")
+			sys.stdout.flush()
+			j += 1
+			pkl_file = open(root+'/nkern/Stacking/'+data_loc+'/'+write_loc+'/Ensemble_'+str(i)+'_Data.pkl','rb')
+			input = pkl.Unpickler(pkl_file)
+			stack_data = input.load()
+
+			# Unpack Variables
+			ens_r,ens_v,ens_gmags,ens_rmags,ens_imags,ens_hvd,ens_caumass,ens_caumass_est,ens_causurf,ens_nfwsurf,los_r,los_v,los_gmags,los_rmags,los_imags,los_hvd,los_caumass,los_caumass_est,los_causurf,los_nfwsurf,x_range,sample_size,pro_pos,gpx3d,gpy3d,gpz3d,gvx3d,gvy3d,gvz3d  = stack_data.values()
 
 			# Append stack_data to major lists
 			ENS_R.append(ens_r)
@@ -216,44 +454,58 @@ class Recover():
 			maLOS_HVD	= ma.masked_array(LOS_HVD_EST,mask=LOS_HVD_EST<epsilon)			
 	
 		# Ensemble Mass Fraction Arrays after taking logarithm. 
-		ens_mfrac = ma.log(ma.compressed(maENS_CAUMASS/M_crit200))
-		ens_vfrac = ma.log(ma.compressed(maENS_HVD/HVD))
+		ENS_MFRAC = np.log(ma.compressed(maENS_CAUMASS/M_crit200))
+		ENS_VFRAC = np.log(ma.compressed(maENS_HVD/HVD))
 
-		# LOS Mass Fraction Arrays
-		array_size = halo_range.size	# halo_range.size for horizontal avg first, line_num for vertical avg first. See sites page
-		los_mfrac,los_vfrac = ma.array([]),ma.array([])
-		for a in range(array_size):
-			# biweightLocation takes only arrays with 4 or more elements
+		# LOS Mass Fraction Arrays: 0th axis is halo number, 1st axis is line of sight number
+		LOS_MFRAC,LOS_VFRAC = [],[]
+		for a in halo_range:
+			LOS_MFRAC.append( ma.log( maLOS_CAUMASS[a]/M_crit200[a] ) )
+			LOS_VFRAC.append( ma.log( maLOS_HVD[a]/HVD[a] ) )
+
+		LOS_MFRAC,LOS_VFRAC = np.array(LOS_MFRAC),np.array(LOS_VFRAC)
+
+		# Create vertically averaged (by halo averaged) arrays, with line_num elements
+		# biweightLocation takes only arrays with 4 or more elements
+		HORZ_LOS_MFRAC,HORZ_LOS_VFRAC = [],[]
+		VERT_LOS_MFRAC,VERT_LOS_VFRAC = [],[]
+		for a in range(varib['line_num']):
 			if len(ma.compressed(maLOS_CAUMASS[a])) > 4:
-				los_mfrac = np.append( los_mfrac, astStats.biweightLocation( np.log( ma.compressed(maLOS_CAUMASS[a]/M_crit200[a])),6.0 )	)
-				los_vfrac = np.append( los_vfrac, astStats.biweightLocation( np.log( ma.compressed(maLOS_HVD[a]/HVD[a])),6.0 )		)
+				VERT_LOS_MFRAC.append( astStats.biweightLocation( ma.compressed( LOS_MFRAC[:,a] ), 6.0 ) )
+				VERT_LOS_VFRAC.append( astStats.biweightLocation( ma.compressed( LOS_VFRAC[:,a] ), 6.0 ) )
+
 			else:
-				los_mfrac = np.append( los_mfrac, ma.median( ma.log(maLOS_CAUMASS[a]/M_crit200[a]) )	)
-				los_vfrac = np.append( los_vfrac, ma.median( ma.log(maLOS_HVD[a]/HVD[a]) )		)
+				VERT_LOS_MFRAC.append( np.median( ma.compressed( LOS_MFRAC[:,a] ) ) )
+				VERT_LOS_VFRAC.append( np.median( ma.compressed( LOS_VFRAC[:,a] ) ) )
+		VERT_LOS_MFRAC,VERT_LOS_VFRAC = np.array(VERT_LOS_MFRAC),np.array(VERT_LOS_VFRAC)
+		
+		# Create horizontally averaged (by line of sight) arrays, with halo_num elements
+		for a in halo_range:
+			if len(ma.compressed(maLOS_CAUMASS[a])) > 4:
+				HORZ_LOS_MFRAC.append( astStats.biweightLocation( ma.compressed( LOS_MFRAC[a] ), 6.0 ) )
+				HORZ_LOS_VFRAC.append( astStats.biweightLocation( ma.compressed( LOS_VFRAC[a] ), 6.0 ) )
+			else:
+				HORZ_LOS_MFRAC.append( np.median( ma.compressed( LOS_MFRAC[a] ) ) )
+				HORZ_LOS_VFRAC.append( np.median( ma.compressed( LOS_VFRAC[a] ) ) )
+		HORZ_LOS_MFRAC,HORZ_LOS_VFRAC = np.array(HORZ_LOS_MFRAC),np.array(HORZ_LOS_VFRAC)
 
-		# Bias and Scatter Calculation
-		ens_mbias,ens_mscat = astStats.biweightLocation(ens_mfrac,6.0),astStats.biweightScale(ma.compressed(ens_mfrac),9.0)
-		los_mbias,los_mscat = astStats.biweightLocation(los_mfrac,6.0),astStats.biweightScale(ma.compressed(los_mfrac),9.0)
-		ens_vbias,ens_vscat = astStats.biweightLocation(ens_vfrac,6.0),astStats.biweightScale(ma.compressed(ens_vfrac),9.0)
-		los_vbias,los_vscat = astStats.biweightLocation(los_vfrac,6.0),astStats.biweightScale(ma.compressed(los_vfrac),9.0)
+		# Bias and Scatter Calculations, LOS bias and scatter taken from vertically averaged arrays
+		ens_mbias,ens_mscat = astStats.biweightLocation(ENS_MFRAC,6.0),astStats.biweightScale(ENS_MFRAC,9.0)
+		los_mbias,los_mscat = astStats.biweightLocation(VERT_LOS_MFRAC,6.0),astStats.biweightScale(VERT_LOS_MFRAC,9.0)
+	#	los_mbias_err = astStats.biweightScale
 
-		# Extra Arrays
-		avgLOS_CAUMASS = np.array(map(np.median,maLOS_CAUMASS))
+		ens_vbias,ens_vscat = astStats.biweightLocation(ENS_VFRAC,6.0),astStats.biweightScale(ENS_VFRAC,9.0)
+		los_vbias,los_vscat = astStats.biweightLocation(VERT_LOS_VFRAC,6.0),astStats.biweightScale(VERT_LOS_VFRAC,9.0)
 
 		# Return to Namespaces depending on go_global
-		names = ['varib','HaloID','Halo_P','Halo_V','GPX3D','GPY3D','GPZ3D','GVX3D','GVY3D','GVZ3D','M_crit200','R_crit200','Z','SRAD','ESRAD','HVD','x_range','ENS_CAUMASS','ENS_CAUMASS_EST','ENS_CAUSURF','ENS_NFWSURF','LOS_CAUMASS','LOS_CAUMASS_EST','LOS_CAUSURF','LOS_NFWSURF','ENS_R','ENS_V','ENS_GMAGS','ENS_RMAGS','ENS_IMAGS','LOS_R','LOS_V','LOS_GMAGS','LOS_RMAGS','LOS_IMAGS','ENS_HVD','LOS_HVD','SAMS','PRO_POS','ens_mbias','ens_mscat','los_mbias','los_mscat','ens_vbias','ens_vscat','los_vbias','los_vscat','maENS_CAUMASS','maENS_HVD','maLOS_CAUMASS','maLOS_HVD','avgLOS_CAUMASS','ens_mfrac','ens_vfrac','los_mfrac','los_vfrac']
-		data = [varib,HaloID,Halo_P,Halo_V,GPX3D,GPY3D,GPZ3D,GVX3D,GVY3D,GVZ3D,M_crit200,R_crit200,Z,SRAD,ESRAD,HVD,x_range,ENS_CAUMASS,ENS_CAUMASS_EST,ENS_CAUSURF,ENS_NFWSURF,LOS_CAUMASS,LOS_CAUMASS_EST,LOS_CAUSURF,LOS_NFWSURF,ENS_R,ENS_V,ENS_GMAGS,ENS_RMAGS,ENS_IMAGS,LOS_R,LOS_V,LOS_GMAGS,LOS_RMAGS,LOS_IMAGS,ENS_HVD,LOS_HVD,SAMS,PRO_POS,ens_mbias,ens_mscat,los_mbias,los_mscat,ens_vbias,ens_vscat,los_vbias,los_vscat,maENS_CAUMASS,maENS_HVD,maLOS_CAUMASS,maLOS_HVD,avgLOS_CAUMASS,ens_mfrac,ens_vfrac,los_mfrac,los_vfrac]
+		names = ['varib','HaloID','Halo_P','Halo_V','GPX3D','GPY3D','GPZ3D','GVX3D','GVY3D','GVZ3D','M_crit200','R_crit200','Z','SRAD','ESRAD','HVD','x_range','ENS_CAUMASS','ENS_CAUMASS_EST','ENS_CAUSURF','ENS_NFWSURF','LOS_CAUMASS','LOS_CAUMASS_EST','LOS_CAUSURF','LOS_NFWSURF','ENS_R','ENS_V','ENS_GMAGS','ENS_RMAGS','ENS_IMAGS','LOS_R','LOS_V','LOS_GMAGS','LOS_RMAGS','LOS_IMAGS','ENS_HVD','LOS_HVD','SAMS','PRO_POS','ens_mbias','ens_mscat','los_mbias','los_mscat','ens_vbias','ens_vscat','los_vbias','los_vscat','maENS_CAUMASS','maENS_HVD','maLOS_CAUMASS','maLOS_HVD','ENS_MFRAC','ENS_VFRAC','LOS_MFRAC','LOS_VFRAC','VERT_LOS_MFRAC','VERT_LOS_VFRAC','HORZ_LOS_MFRAC','HORZ_LOS_VFRAC']
+		data = [varib,HaloID,Halo_P,Halo_V,GPX3D,GPY3D,GPZ3D,GVX3D,GVY3D,GVZ3D,M_crit200,R_crit200,Z,SRAD,ESRAD,HVD,x_range,ENS_CAUMASS,ENS_CAUMASS_EST,ENS_CAUSURF,ENS_NFWSURF,LOS_CAUMASS,LOS_CAUMASS_EST,LOS_CAUSURF,LOS_NFWSURF,ENS_R,ENS_V,ENS_GMAGS,ENS_RMAGS,ENS_IMAGS,LOS_R,LOS_V,LOS_GMAGS,LOS_RMAGS,LOS_IMAGS,ENS_HVD,LOS_HVD,SAMS,PRO_POS,ens_mbias,ens_mscat,los_mbias,los_mscat,ens_vbias,ens_vscat,los_vbias,los_vscat,maENS_CAUMASS,maENS_HVD,maLOS_CAUMASS,maLOS_HVD,ENS_MFRAC,ENS_VFRAC,LOS_MFRAC,LOS_VFRAC,VERT_LOS_MFRAC,VERT_LOS_VFRAC,HORZ_LOS_MFRAC,HORZ_LOS_VFRAC]
 		mydict = dict( zip(names,data) )
 		if go_global == True:
 			globals().update(mydict)
 			return
 		elif go_global == False:
 			return  mydict	
-
-
-	def bs_recover():
-		pass
-
 
 
 class Work(Recover):
@@ -361,6 +613,7 @@ if work == True:
 	file = open('extended_table_analysis_2124halo.pkl','wb')
 	output = pkl.Pickler(file)
 	output.dump(data)
+
 
 
 ## Histogram Plots

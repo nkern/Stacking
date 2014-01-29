@@ -87,7 +87,7 @@ class universal:
 		I_Mags = []
 		Gal_V = []
 		Gal_P = []
-		for k in self.stack_num:
+		for k in self.stack_range:
 			galdata = self.load_galaxies(HaloID[k],HaloData.T[k])
 			# unpack array galdata into namespace
 			gpx,gpy,gpz,gvx,gvy,gvz,gmags,rmags,imags = galdata	
@@ -239,10 +239,13 @@ class universal:
 		# Sort by ascending r magnitude (bright to dim)
 		sorts = np.argsort(rmags)
 		r,v,gmags,rmags,imags = r[sorts],v[sorts],gmags[sorts],rmags[sorts],imags[sorts]
+
 		# Limit Phase Space
 		sample = np.where( (r < r200*self.r_limit) & (v > -self.v_limit) & (v < self.v_limit) )[0] 
 		r,v,gmags,rmags,imags = r[sample],v[sample],gmags[sample],rmags[sample],imags[sample]
 		samp_size = len(sample)
+
+
 		# Eliminate galaxies w/ mag = 99.
 		cut = np.where((gmags!=99)&(rmags!=99)&(imags!=99))[0]
 		r,v,gmags,rmags,imags = r[cut],v[cut],gmags[cut],rmags[cut],imags[cut]
@@ -254,8 +257,8 @@ class universal:
 	def get_3d(self,Gal_P,Gal_V,G_Mags,R_Mags,I_Mags,gmags,rmags,imags):
 		'''
 		This function retreives the 3D position and velocity data for finalized galaxies in phase spaces for a given Halo.
-		It matches the galaxies using the magnitude as a key, but rarley magnitudes are degenerate.
-		Therefore, three different magnitudes are provided, given the fact that degeneracy on all 3 levels for a given galaxy is extremely low.
+		It matches the galaxies using the magnitude as a key, b/c rarely are magnitudes degenerate, however, sometimes they are.
+		Therefore, three different magnitudes are provided, given the fact that degeneracy on all 3 levels for 2 or more galaxies is extremely low.
 		'''
 		gpx3d,gpy3d,gpz3d,gvx3d,gvy3d,gvz3d = [],[],[],[],[],[]
 		# Match Galaxies by Magnitude
@@ -272,6 +275,7 @@ class universal:
 					if size > 1:
 						print 'degeneracy on all magnitudes!'
 						break
+
 			select.append(int(pick[0]))
 		select = np.array(select)
 		gpx3d,gpy3d,gpz3d = Gal_P[0][select],Gal_P[1][select],Gal_P[2][select]

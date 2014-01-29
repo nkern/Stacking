@@ -19,7 +19,7 @@ import astStats
 
 ## Program ##
 
-class selfstack:
+class stack:
 
 	def __init__(self,varib,U,C,CausticSurface,MassCalc):
 		''' Initial function for class selfstack '''
@@ -51,7 +51,7 @@ class selfstack:
 
 		richness = len( np.where(r<r_crit200)[0])
 		print 'Richness Within R200 =',richness
-		print 'Calculated HVD =',derived_hvd
+		print 'Calculated HVD =',np.floor(derived_hvd)
 
 		## Mirror Phase Space Velocity Data if mirror == True
 		mirror = True
@@ -87,6 +87,7 @@ class selfstack:
 
 		## Mass Calculation, leave clus_z blank for now
 		self.MC = self.MassCalc(self.C.x_range,self.CS.Ar_finalD,derived_hvd,0,r200=r_crit200,beta=self.beta,fbr=self.fbeta,H0=self.H0)
+
 		return self.MC.M200,self.MC.M200_est,self.CS.Ar_finalD,self.CS.vesc_fit	
 
 
@@ -116,7 +117,7 @@ class selfstack:
 
 			# Limit Data in Phase Space
 			r,v,gmags,rmags,imags,samp_size = self.U.limit_gals(r,v,G_Mags[j],R_Mags[j],I_Mags[j],R_crit200[k],HVD[k])
-	
+
 			# Build LOS and Ensemble, with given method of stacking
 			en_r,en_v,en_gmags,en_rmags,en_imags,ln_r,ln_v,ln_gmags,ln_rmags,ln_imags = self.build_ensemble(r,v,gmags,rmags,imags,HaloData.T[k],l)	
 
@@ -127,26 +128,33 @@ class selfstack:
 			ens_rmags.extend(en_rmags)
 			ens_imags.extend(en_imags)
 			
-			# Calculate LOS HVD (this is after shiftgapper)
-			ln_within = np.where(ln_r<R_crit200[k])[0]
-			gal_count = len(ln_within)
-			if gal_count <= 3:
-				'''biweightScale can't take less than 4 elements'''
-				# Calculate hvd with numpy std of galaxies within r200 (b/c this is quoted richness)
-				ln_hvd = np.std(np.copy(ln_v)[ln_within])
-			else:
-				# Calculate hvd with astStats biweightScale (see Beers 1990)
-				try:
-					ln_hvd = astStats.biweightScale(np.copy(ln_v)[ln_within],9.0)
-				# Sometimes divide by zero error in biweight function for low gal_num
-				except ZeroDivisionError:
-					print 'ZeroDivisionError in biweightfunction, line 140 in caustic_class_stack2D'
-					print 'ln_v[ln_within]=',ln_v[ln_within]
+			# Calculate LOS HVD (this is after shiftgapper) if run_los == True
+			if self.run_los == True:
+				ln_within = np.where(ln_r<R_crit200[k])[0]
+				gal_count = len(ln_within)
+				if gal_count <= 3:
+					'''biweightScale can't take less than 4 elements'''
+					# Calculate hvd with numpy std of galaxies within r200 (b/c this is quoted richness)
 					ln_hvd = np.std(np.copy(ln_v)[ln_within])
+				else:
+					# Calculate hvd with astStats biweightScale (see Beers 1990)
+					try:
+						ln_hvd = astStats.biweightScale(np.copy(ln_v)[ln_within],9.0)
+					# Sometimes divide by zero error in biweight function for low gal_num
+					except ZeroDivisionError:
+						print 'ZeroDivisionError in biweightfunction, line 140 in caustic_class_stack2D'
+						print 'ln_v[ln_within]=',ln_v[ln_within]
+						ln_hvd = np.std(np.copy(ln_v)[ln_within])
+			else:
+				ln_hvd = []
 
-			# Run Caustic Technique for LOS mass estimation
-			ln_caumass,ln_caumass_est,ln_causurf,ln_nfwsurf = self.kernel_caustic_masscalc(ln_r,ln_v,HaloData.T[k],ln_hvd,k,l)
-			
+			# Run Caustic Technique for LOS mass estimation if run_los == True
+			if self.run_los == True:
+				ln_caumass,ln_caumass_est,ln_causurf,ln_nfwsurf = self.kernel_caustic_masscalc(ln_r,ln_v,HaloData.T[k],ln_hvd,k,l)
+				print 'j = '+str(j)+', k = '+str(k)+', l = '+str(l)
+			else:
+				ln_caumass,ln_caumass_est,ln_causurf,ln_nfwsurf = [],[],[],[]
+	
 			# Append LOS Data Arrays
 			los_r.append(ln_r)
 			los_v.append(ln_v)
@@ -176,7 +184,7 @@ class selfstack:
 		# Calculate HVD
 		en_hvd = astStats.biweightScale(np.copy(ens_v)[np.where(ens_r<=R_crit200[k])],9.0)
 
-		# Caustic Technique for Ensemble
+		# Run Caustic Technique! 
 		en_caumass,en_caumass_est,en_causurf,en_nfwsurf = self.kernel_caustic_masscalc(ens_r,ens_v,HaloData.T[k],en_hvd,k)
 
 		# Append Ensemble Data Arrays
@@ -194,6 +202,7 @@ class selfstack:
 		sample_size,pro_pos = np.array(sample_size),np.array(pro_pos)
 
 		return ens_r,ens_v,ens_gmags,ens_rmags,ens_imags,ens_hvd,ens_caumass,ens_caumass_est,ens_causurf,ens_nfwsurf,los_r,los_v,los_gmags,los_rmags,los_imags,los_hvd,los_caumass,los_caumass_est,los_causurf,los_nfwsurf,self.C.x_range,sample_size,pro_pos	
+
 
 
 	def build_ensemble(self,r,v,gmags,rmags,imags,halodata,l):
@@ -265,12 +274,13 @@ class selfstack:
 	def build_method_1(self,r,v,gmags,rmags,imags,r_crit200):
 		'''Randomly choosing bright galaxies until gal_num galaxies are within r200'''
 		gal_num = self.gal_num
-
+		
 		# reduce size of sample to something reasonable within magnitude limits
 		sample = gal_num * 25				# arbitrary coefficient, see sites page post Apr 24th, 2013 for more info
 		r,v,gmags,rmags,imags = r[:sample],v[:sample],gmags[:sample],rmags[:sample],imags[:sample]
 		samp_size = len(r)				# actual size of sample (might be less than gal_num*25)
 		self.samp_size = samp_size
+
 		# create random numbered array for galaxy selection
 		if gal_num < 10:				# when gal_num < 10, has trouble hitting gal_num richness inside r200
 			excess = gal_num * 4.0 / 5.0
@@ -345,6 +355,7 @@ class selfstack:
 		
 		return en_r,en_v,en_gmags,en_rmags,en_imags,ln_r,ln_v,ln_gmags,ln_rmags,ln_imags,samp_size
 
+
 	def build_method_2(self,r,v,mags,r_crit200):
 		'''Ordered Set of galaxies with respect to magnitude'''
 		### NOT FINSHED YET !! ###
@@ -365,5 +376,132 @@ class selfstack:
 		r,v,mags,gpx3d,gpy3d,gpz3d,gvx3d,gvy3d,gvz3d = rt[:end],vt[:end],magst[:end],gpx3dt[:end],gpy3dt[:end],gpz3dt[:end],gvx3dt[:end],gvy3dt[:end],gvz3dt[:end] 
 		###########################
 		return en_r,en_v,en_m,ln_r,ln_v,ln_m
+
+
+	#####################################
+	########### Bin Stacking ############
+	#####################################
+
+	def bin_stack_clusters(self,HaloID,HaloData,Halo_P,Halo_V,Gal_P,Gal_V,G_Mags,R_Mags,I_Mags,k,j):
+		''' Building Ensemble Cluster and Calculating Property Statistics '''
+		## Unpack HaloData array 
+		M_crit200,R_crit200,Z,SRAD,ESRAD,HVD = HaloData
+
+		## Define Arrays for Building Ensemble and LOS
+		# Ensemble Arrays:	[Successive Ensemble Number][Data]
+		# Line of Sight Arrays:	[Line Of Sight][Data]
+		ens_r,ens_v,ens_gmags,ens_rmags,ens_imags,ens_hvd = [],[],[],[],[],[]
+		ens_caumass, ens_caumass_est, ens_causurf, ens_nfwsurf = [], [], [], []
+		los_r,los_v,los_gmags,los_rmags,los_imags,los_hvd = [],[],[],[],[],[]
+		los_caumass, los_caumass_est, los_causurf, los_nfwsurf = [], [], [], []
+		sample_size,pro_pos = [],[]
+
+		## Loop over lines of sight (different clusters)
+		for [l,s] in zip(np.arange(self.line_num*j,self.line_num*(j+1)),self.stack_range[j*self.line_num:(j+1)*self.line_num]):
+
+			# Define index for to-be-stacked halo as cluster index (k) + line of sight index (l)
+
+			if self.light_cone == True:
+				# Configure RA, DEC and Z into cluster-centric radius and velocity
+				pass
+			else:
+				# Line of Sight Calculation for naturally 3D data
+				r, v, projected_pos = self.U.line_of_sight(Gal_P[l],Gal_V[l],Halo_P[s],Halo_V[s],s)
+
+			# Limit Data in Phase Space
+			r,v,gmags,rmags,imags,samp_size = self.U.limit_gals(r,v,G_Mags[l],R_Mags[l],I_Mags[l],R_crit200[s],HVD[s])
+
+			# Build LOS and Ensemble, with given method of stacking
+			en_r,en_v,en_gmags,en_rmags,en_imags,ln_r,ln_v,ln_gmags,ln_rmags,ln_imags = self.build_ensemble(r,v,gmags,rmags,imags,HaloData.T[s],l)	
+
+			# Build Ensemble Arrays
+			ens_r.extend(en_r)
+			ens_v.extend(en_v)
+			ens_gmags.extend(en_gmags)
+			ens_rmags.extend(en_rmags)
+			ens_imags.extend(en_imags)
+			
+			# Calculate LOS HVD (this is after shiftgapper) if run_los == True
+			if self.run_los == True:
+				ln_within = np.where(ln_r<R_crit200[s])[0]
+				gal_count = len(ln_within)
+				if gal_count <= 3:
+					'''biweightScale can't take less than 4 elements'''
+					# Calculate hvd with numpy std of galaxies within r200 (b/c this is quoted richness)
+					ln_hvd = np.std(np.copy(ln_v)[ln_within])
+				else:
+					# Calculate hvd with astStats biweightScale (see Beers 1990)
+					try:
+						ln_hvd = astStats.biweightScale(np.copy(ln_v)[ln_within],9.0)
+					# Sometimes divide by zero error in biweight function for low gal_num
+					except ZeroDivisionError:
+						print 'ZeroDivisionError in biweightfunction, line 140 in caustic_class_stack2D'
+						print 'ln_v[ln_within]=',ln_v[ln_within]
+						ln_hvd = np.std(np.copy(ln_v)[ln_within])
+			else:
+				ln_hvd = []
+
+			# Run Caustic Technique for LOS mass estimation if run_los == True
+			if self.run_los == True:
+				ln_caumass,ln_caumass_est,ln_causurf,ln_nfwsurf = self.kernel_caustic_masscalc(ln_r,ln_v,HaloData.T[s],ln_hvd,k,l)
+				print 'j = '+str(j)+', k = '+str(k)+', l = '+str(l)+', s = '+str(s)
+			else:
+				ln_caumass,ln_caumass_est,ln_causurf,ln_nfwsurf = [],[],[],[]
+		
+	
+			# Append LOS Data Arrays
+			los_r.append(ln_r)
+			los_v.append(ln_v)
+			los_gmags.append(ln_gmags)
+			los_rmags.append(ln_rmags)
+			los_imags.append(ln_imags)
+			los_hvd.append(ln_hvd)
+			los_caumass.append(ln_caumass)
+			los_caumass_est.append(ln_caumass_est)
+			los_causurf.append(ln_causurf)
+			los_nfwsurf.append(ln_nfwsurf)
+			sample_size.append(samp_size)
+			pro_pos.append(projected_pos)
+
+		# Shiftgapper for Ensemble Interloper treatment
+		ens_r,ens_v,ens_gmags,ens_rmags,ens_imags = self.C.shiftgapper(np.vstack([ens_r,ens_v,ens_gmags,ens_rmags,ens_imags]).T).T
+
+		# Reduce system to gal_num richness within r200
+		within = np.where(ens_r <= R_crit200[k])[0]
+		end = within[:self.gal_num*self.line_num + 1][-1]
+		ens_r = ens_r[:end]
+		ens_v = ens_v[:end]
+		ens_gmags = ens_gmags[:end]
+		ens_rmags = ens_rmags[:end]
+		ens_imags = ens_imags[:end]
+
+		# Calculate HVD
+		en_hvd = astStats.biweightScale(np.copy(ens_v)[np.where(ens_r<=R_crit200[k])],9.0)
+
+		# Run Caustic Technique! 
+		en_caumass,en_caumass_est,en_causurf,en_nfwsurf = self.kernel_caustic_masscalc(ens_r,ens_v,HaloData.T[k],en_hvd,k)
+
+		# Append Ensemble Data Arrays
+		ens_hvd.append(en_hvd)
+		ens_caumass.append(en_caumass)
+		ens_caumass_est.append(en_caumass_est)
+
+		# Turn into numpy arrays
+		ens_r,ens_v,ens_gmags,ens_rmags,ens_imags = np.array(ens_r),np.array(ens_v),np.array(ens_gmags),np.array(ens_rmags),np.array(ens_imags)
+		ens_hvd,ens_caumass,ens_caumass_est = np.array(ens_hvd),np.array(ens_caumass),np.array(ens_caumass_est)
+		ens_causurf,ens_nfwsurf = np.array(en_causurf),np.array(en_nfwsurf)
+		los_r,los_v,los_gmags,los_rmags,los_imags = np.array(los_r),np.array(los_v),np.array(los_gmags),np.array(los_rmags),np.array(los_imags)
+		los_hvd,los_caumass,los_caumass_est = np.array(los_hvd),np.array(los_caumass),np.array(los_caumass_est)
+		los_causurf,los_nfwsurf = np.array(los_causurf),np.array(los_nfwsurf)
+		sample_size,pro_pos = np.array(sample_size),np.array(pro_pos)
+
+		return ens_r,ens_v,ens_gmags,ens_rmags,ens_imags,ens_hvd,ens_caumass,ens_caumass_est,ens_causurf,ens_nfwsurf,los_r,los_v,los_gmags,los_rmags,los_imags,los_hvd,los_caumass,los_caumass_est,los_causurf,los_nfwsurf,self.C.x_range,sample_size,pro_pos	
+
+
+
+
+
+
+
 
 
