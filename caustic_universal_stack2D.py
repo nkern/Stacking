@@ -122,8 +122,8 @@ class universal:
 
 		# Cosmology corrections
 		gpx,gpy,gpz = (gpx/(1+z)),(gpy/(1+z)),(gpz/(1+z))
-		# convert to physical coordinates
-		gvx,gvy,gvz = gvx-hvx,gvy-hvy,gvz-hvz
+
+		# Turn into array
 		gmags,rmags,imags = np.array(gmags,float),np.array(rmags,float),np.array(imags,float)
 		# remove BCG from sample
 		BCG = np.where(gpx != hpx)
@@ -219,9 +219,9 @@ class universal:
 		fast = weave.inline(code,['gal_pos_unit','n','gal_dist','gal_vlos','gal_v','new_pos','gal_p'],type_converters=converters.blitz,compiler='gcc')
 		angles = np.arccos(np.dot(halo_pos_unit,gal_pos_unit))
 		r = angles*halo_dist
-		v_pec = gal_vlos-halo_vlos*np.dot(halo_pos_unit,gal_pos_unit)
+		#v_pec = gal_vlos-halo_vlos*np.dot(halo_pos_unit,gal_pos_unit)
 		z_clus_cos = self.H0*halo_dist/self.c
-		z_clus_pec = 0#halo_vlos/c
+		z_clus_pec = halo_vlos/self.c
 		z_clus_obs = (1+z_clus_pec)*(1+z_clus_cos)-1
 		z_gal_cos = self.H0*gal_dist/self.c
 		z_gal_pec = gal_vlos/self.c

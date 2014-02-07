@@ -111,7 +111,7 @@ class Stack:
 		## Program
 		# Unpack halodata array into local namespace depending on SS or BS
 		m_crit200,r_crit200,z,srad,esrad,hvd = halodata
-		
+	
 		# Sort galaxies by r Magnitude
 		bright = np.argsort(rmags)
 		r,v,gmags,rmags,imags = r[bright],v[bright],gmags[bright],rmags[bright],imags[bright]
@@ -124,7 +124,6 @@ class Stack:
 		
 #		elif self.method_num == 2:
 #			en_r,en_v,en_m,ln_r,ln_v,ln_m = self.build_method_2(r,v,mags,r_crit200)
-
 
 		return en_r,en_v,en_gmags,en_rmags,en_imags,ln_r,ln_v,ln_gmags,ln_rmags,ln_imags
 
