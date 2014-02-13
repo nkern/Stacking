@@ -41,7 +41,7 @@ class Recover():
 		pass
 
 
-	def recover(self,write_loc=write_loc,raw_data=False,ss=True,go_global=True,ens_only=True):
+	def recover(self,write_loc=write_loc,raw_data=False,ss=True,go_global=True,ens_only=False,data_loc=None):
 		"""
 		This function uploads the pickle files from directory stack_data and configures them into multi dimensional arrays.
 		It is meant to work with the self-stacked ensembles.
@@ -61,8 +61,9 @@ class Recover():
 		SAMS,PRO_POS,GPX3D,GPY3D,GPZ3D,GVX3D,GVY3D,GVZ3D = [],[],[],[],[],[],[],[]
 
 		# Initialization step 
-		if ss:	data_loc = 'selfstack_run_table'
-		else:	data_loc = 'binstack_run_table'
+		if data_loc==None:	
+			if ss:	data_loc = 'selfstack_run_table'
+			else:	data_loc = 'binstack_run_table'
 
 		pkl_file = open(root+'/nkern/Stacking/'+data_loc+'/'+write_loc+'/Ensemble_'+str(0)+'_Data.pkl','rb')
 		input = pkl.Unpickler(pkl_file)
@@ -206,25 +207,22 @@ class Recover():
 		### Statistical Calculations ###
 		################################
 		if ss:
+			ENS_MFRAC,ens_mbias,ens_mscat,ENS_VFRAC,ens_vbias,ens_vscat = self.stat_calc(ENS_CAUMASS,M_crit200,ENS_HVD,HVD)
 			if ens_only == True:
-				ens_mbias,ens_mscat,ens_vbias,ens_vscat = self.stat_calc(ENS_CAUMASS,M_crit200,ENS_HVD,HVD)
-				los_mbias,los_mscat,los_vbias,los_vscat = None,None,None,None
+				LOS_MFRAC,los_mbias,los_mscat,LOS_VFRAC,los_vbias,los_vscat = None,None,None,None,None,None
 			else:
-				ens_mbias,ens_mscat,ens_vbias,ens_vscat = self.stat_calc(ENS_CAUMASS,M_crit200,ENS_HVD,HVD)
-				los_mbias,los_mscat,los_vbias,los_vscat = self.stat_calc(LOS_CAUMASS,M_crit200,LOS_HVD,HVD,ens=False)
+				LOS_MFRAC,los_mbias,los_mscat,LOS_VFRAC,los_vbias,los_vscat = self.stat_calc(LOS_CAUMASS,M_crit200,LOS_HVD,HVD,ens=False)
 		else:
+			ENS_MFRAC,ens_mbias,ens_mscat,ENS_VFRAC,ens_vbias,ens_vscat = self.stat_calc(ENS_CAUMASS,BIN_M200,ENS_HVD,BIN_HVD)
 			if ens_only == True:
-				ens_mbias,ens_mscat,ens_vbias,ens_vscat = self.stat_calc(ENS_CAUMASS,BIN_M200,ENS_HVD,BIN_HVD)
-				los_mbias,los_mscat,los_vbias,los_vscat = None,None,None,None
+				LOS_MFRAC,los_mbias,los_mscat,LOS_VFRAC,los_vbias,los_vscat = None,None,None,None
 			else:
-				ens_mbias,ens_mscat,ens_vbias,ens_vscat = self.stat_calc(ENS_CAUMASS,M_crit200,ENS_HVD,HVD)
-				los_mbias,los_mscat,los_vbias,los_vscat = self.stat_calc(LOS_CAUMASS,M_crit200,LOS_HVD,HVD,ens=False)
-
+				LOS_MFRAC,los_mbias,los_mscat,LOS_VFRAC,los_vbias,los_vscat = self.stat_calc(LOS_CAUMASS,M_crit200,LOS_HVD,HVD,ens=False)
 
 
 		# Return to Namespaces depending on go_global
-		names = ['varib','HaloID','Halo_P','Halo_V','GPX3D','GPY3D','GPZ3D','GVX3D','GVY3D','GVZ3D','M_crit200','R_crit200','Z','SRAD','ESRAD','HVD','x_range','ENS_CAUMASS','ENS_CAUMASS_EST','ENS_CAUSURF','ENS_NFWSURF','LOS_CAUMASS','LOS_CAUMASS_EST','LOS_CAUSURF','LOS_NFWSURF','ENS_R','ENS_V','ENS_GMAGS','ENS_RMAGS','ENS_IMAGS','LOS_R','LOS_V','LOS_GMAGS','LOS_RMAGS','LOS_IMAGS','ENS_HVD','LOS_HVD','SAMS','PRO_POS','ens_mbias','ens_mscat','los_mbias','los_mscat','ens_vbias','ens_vscat','los_vbias','los_vscat','ENS_MFRAC','ENS_VFRAC','LOS_MFRAC','LOS_VFRAC','VERT_LOS_MFRAC','VERT_LOS_VFRAC','HORZ_LOS_MFRAC','HORZ_LOS_VFRAC']
-		data = [varib,HaloID,Halo_P,Halo_V,GPX3D,GPY3D,GPZ3D,GVX3D,GVY3D,GVZ3D,M_crit200,R_crit200,Z,SRAD,ESRAD,HVD,x_range,ENS_CAUMASS,ENS_CAUMASS_EST,ENS_CAUSURF,ENS_NFWSURF,LOS_CAUMASS,LOS_CAUMASS_EST,LOS_CAUSURF,LOS_NFWSURF,ENS_R,ENS_V,ENS_GMAGS,ENS_RMAGS,ENS_IMAGS,LOS_R,LOS_V,LOS_GMAGS,LOS_RMAGS,LOS_IMAGS,ENS_HVD,LOS_HVD,SAMS,PRO_POS,ens_mbias,ens_mscat,los_mbias,los_mscat,ens_vbias,ens_vscat,los_vbias,los_vscat,ENS_MFRAC,ENS_VFRAC,LOS_MFRAC,LOS_VFRAC,VERT_LOS_MFRAC,VERT_LOS_VFRAC,HORZ_LOS_MFRAC,HORZ_LOS_VFRAC]
+		names = ['varib','HaloID','Halo_P','Halo_V','GPX3D','GPY3D','GPZ3D','GVX3D','GVY3D','GVZ3D','M_crit200','R_crit200','Z','SRAD','ESRAD','HVD','x_range','ENS_CAUMASS','ENS_CAUMASS_EST','ENS_CAUSURF','ENS_NFWSURF','LOS_CAUMASS','LOS_CAUMASS_EST','LOS_CAUSURF','LOS_NFWSURF','ENS_R','ENS_V','ENS_GMAGS','ENS_RMAGS','ENS_IMAGS','LOS_R','LOS_V','LOS_GMAGS','LOS_RMAGS','LOS_IMAGS','ENS_HVD','LOS_HVD','SAMS','PRO_POS','ens_mbias','ens_mscat','los_mbias','los_mscat','ens_vbias','ens_vscat','los_vbias','los_vscat','ENS_MFRAC','ENS_VFRAC','LOS_MFRAC','LOS_VFRAC']
+		data = [varib,HaloID,Halo_P,Halo_V,GPX3D,GPY3D,GPZ3D,GVX3D,GVY3D,GVZ3D,M_crit200,R_crit200,Z,SRAD,ESRAD,HVD,x_range,ENS_CAUMASS,ENS_CAUMASS_EST,ENS_CAUSURF,ENS_NFWSURF,LOS_CAUMASS,LOS_CAUMASS_EST,LOS_CAUSURF,LOS_NFWSURF,ENS_R,ENS_V,ENS_GMAGS,ENS_RMAGS,ENS_IMAGS,LOS_R,LOS_V,LOS_GMAGS,LOS_RMAGS,LOS_IMAGS,ENS_HVD,LOS_HVD,SAMS,PRO_POS,ens_mbias,ens_mscat,los_mbias,los_mscat,ens_vbias,ens_vscat,los_vbias,los_vscat,ENS_MFRAC,ENS_VFRAC,LOS_MFRAC,LOS_VFRAC]
 		mydict = dict( zip(names,data) )
 		if go_global == True:
 			globals().update(mydict)
@@ -257,7 +255,7 @@ class Recover():
 		if ens == True:
 			mbias,mscat = astStats.biweightLocation(MFRAC,6.0),astStats.biweightScale(MFRAC,9.0)
 			vbias,vscat = astStats.biweightLocation(VFRAC,6.0),astStats.biweightScale(VFRAC,9.0)
-			return mbias,mscat,vbias,vscat
+			return MFRAC,mbias,mscat,VFRAC,vbias,vscat
 		else:
 			# Create vertically averaged (by halo averaged) arrays, with line_num elements
 			# biweightLocation takes only arrays with 4 or more elements
@@ -283,7 +281,7 @@ class Recover():
 			# Bias and Scatter Calculations
 			mbias,mscat = astStats.biweightLocation(VERT_MFRAC,6.0),astStats.biweightScale(VERT_MFRAC,9.0)
 			vbias,vscat = astStats.biweightLocation(VERT_VFRAC,6.0),astStats.biweightScale(VERT_VFRAC,9.0)
-			return mbias,mscat,vbias,vscat
+			return MFRAC,mbias,mscat,VFRAC,vbias,vscat
 		
 
 
@@ -297,7 +295,7 @@ class Work(Recover):
 		''' This function was created so as to reclaim the mydict dictionary memory after exiting the function.'''
 		
 		# Load in Data from Run Table and append
-		mydict = self.recover(write_loc=write_loc,halo_range=np.arange(2124),go_global=False)
+		mydict = self.recover(write_loc=write_loc,go_global=False)
 		d = AttrDict(mydict)
 		RUN_NUM.append(i)
 		GAL_NUM.append(d.varib['gal_num'])

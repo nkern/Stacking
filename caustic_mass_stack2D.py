@@ -46,17 +46,17 @@ fbeta		= 0.65				# fbeta value, see 'Diaferio 1999'
 r_limit 	= 1.5				# Radius Cut Scaled by R200
 v_limit		= 3500.0			# Velocity Cut in km/s
 data_set	= 'Guo30_2'			# Data set to draw semi analytic data from
-data_loc	= 'binstack_run_table'		# Parent Directory where write_loc directories live
+data_loc	= 'binstack_run_table2'		# Parent Directory where write_loc directories live
 halo_num	= 2100				# Total number of halos loaded
 run_time	= time.asctime()		# Time when program was started
 
 ## RUN DEPENDENT CONSTANTS ##
-run_num		= int(sys.argv[1])	# Run Number: referring to the run_num th iteration of this program via job array in FLUX
-clus_num	= int(sys.argv[2])	# Number of Ensembles to build and solve for in this run
-gal_num		= int(sys.argv[3])	# Number of galaxies taken per line of sight
-line_num	= int(sys.argv[4])	# Number of lines of sight to stack over
-method_num	= int(sys.argv[5])	# Ensemble Build Method Number
-cell_num	= sys.argv[6]		# Cell Number ID corresponding to given gal_num & line_num geometry in a Run Table
+run_num		= int(sys.argv[1])		# Run Number: referring to the run_num th iteration of this program via job array in FLUX
+clus_num	= int(sys.argv[2])		# Number of Ensembles to build and solve for in this run
+gal_num		= int(sys.argv[3])		# Number of galaxies taken per line of sight
+line_num	= int(sys.argv[4])		# Number of lines of sight to stack over
+method_num	= int(sys.argv[5])		# Ensemble Build Method Number
+cell_num	= sys.argv[6]			# Cell Number ID corresponding to given gal_num & line_num geometry in a Run Table
 
 if use_flux == True: 
 	root=str('/nfs/christoq_ls')		# Change directory scheme if using flux or sophie
@@ -165,6 +165,8 @@ if write_data == True:
 		output = pkl.Pickler(pkl_file)
 		output.dump(STACK_DATA[m])
 		output.dump(varib)
+		if self_stack == False:
+			output.dump(BinData)
 		pkl_file.close()
 	
 	U.print_separation('#...Finished Data Write',type=2)

@@ -175,6 +175,9 @@ class Stack:
 		# shiftgapper on line of sight
 		r2,v2,gmags2,rmags2,imags2 = self.C.shiftgapper(np.vstack([r[:end],v[:end],gmags[:end],rmags[:end],imags[:end]]).T).T
 		within = np.where(r2<r_crit200)[0]		# re-calculate within array with new sample
+		# Sort by rmags
+		sort = np.argsort(rmags2)
+		r2,v2,gmags2,rmags2,imags2 = r2[sort],v2[sort],gmags2[sort],rmags2[sort],imags2[sort]
 		# Now feed ln arrays correct gal_num richness within r200
 		end = within[:gal_num + 1][-1]
 		ln_r,ln_v,ln_gmags,ln_rmags,ln_imags = r2[:end],v2[:end],gmags2[:end],rmags2[:end],imags2[:end]	
@@ -230,7 +233,12 @@ class Stack:
 			excess = gal_num / 5.0
 		try:
 			end = within[:gal_num + excess + 1][-1]
+			# shiftgapper
 			r2,v2,gmags2,rmags2,imags2 = self.C.shiftgapper(np.vstack([r[rando][:end],v[rando][:end],gmags[rando][:end],rmags[rando][:end],imags[rando][:end]]).T).T
+			# sort by rmags
+			sort = np.argsort(rmags2)
+			r2,v2,gmags2,rmags2,imags2 = r2[sort],v2[sort],gmags2[sort],rmags2[sort],imags2[sort]
+			# feed back gal_num gals within r200
 			within = np.where(r2<r_crit200)[0]
 			end = within[:gal_num + 1][-1]
 			richness = len(within)
@@ -388,6 +396,10 @@ class SelfStack:
 		# Shiftgapper for Ensemble Interloper treatment
 		ens_r,ens_v,ens_gmags,ens_rmags,ens_imags = self.C.shiftgapper(np.vstack([ens_r,ens_v,ens_gmags,ens_rmags,ens_imags]).T).T
 
+		# Sort by R_Mag
+		sort = np.argsort(ens_rmags)
+		ens_r,ens_v,ens_gmags,ens_rmags,ens_imags = ens_r[sort],ens_v[sort],ens_gmags[sort],ens_rmags[sort],ens_imags[sort]
+
 		# Reduce system to gal_num richness within r200
 		within = np.where(ens_r <= R_crit200[k])[0]
 		end = within[:self.gal_num*self.line_num + 1][-1]
@@ -471,6 +483,10 @@ class BinStack:
 			# Build LOS and Ensemble, with given method of stacking
 			en_r,en_v,en_gmags,en_rmags,en_imags,ln_r,ln_v,ln_gmags,ln_rmags,ln_imags = self.S.build_ensemble(r,v,gmags,rmags,imags,HaloData.T[s],l)	
 
+			# If Scale data before stack is desired
+			if self.scale_data == True:
+				en_r = self.U.scale_gals(en_r,R_crit200[s])				
+	
 			# Build Ensemble Arrays
 			ens_r.extend(en_r)
 			ens_v.extend(en_v)
@@ -480,6 +496,7 @@ class BinStack:
 			
 			# Calculate LOS HVD (this is after shiftgapper) if run_los == True
 			if self.run_los == True:
+				# Pick out gals within r200
 				ln_within = np.where(ln_r<R_crit200[s])[0]
 				gal_count = len(ln_within)
 				if gal_count <= 3:
@@ -520,8 +537,16 @@ class BinStack:
 			sample_size.append(samp_size)
 			pro_pos.append(projected_pos)
 
+		# If scale data == True, re-scale by ensemble r200
+		if self.scale_data == True:
+			ens_r = np.array(ens_r)*BIN_R200[k]
+
 		# Shiftgapper for Ensemble Interloper treatment
 		ens_r,ens_v,ens_gmags,ens_rmags,ens_imags = self.C.shiftgapper(np.vstack([ens_r,ens_v,ens_gmags,ens_rmags,ens_imags]).T).T
+
+		# Sort by R_Mag
+		sort = np.argsort(ens_rmags)
+		ens_r,ens_v,ens_gmags,ens_rmags,ens_imags = ens_r[sort],ens_v[sort],ens_gmags[sort],ens_rmags[sort],ens_imags[sort]
 
 		# Reduce system to gal_num richness within r200
 		within = np.where(ens_r <= BIN_R200[k])[0]

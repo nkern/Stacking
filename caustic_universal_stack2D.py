@@ -131,11 +131,10 @@ class universal:
 		return np.vstack([ gpx[BCG], gpy[BCG], gpz[BCG], gvx[BCG], gvy[BCG], gvz[BCG], gmags[BCG], rmags[BCG], imags[BCG] ])
 
 
-	def scale_gals(self,r,v,r_crit200,hvd):
-		''' Scales galaxy projected radius and velocity data by a given radius and velocity dispersion '''
+	def scale_gals(self,r,r_crit200):
+		''' Scales galaxy projected radius by a given radius'''
 		r /= r_crit200
-		v /= hvd
-		return r, v
+		return r
 
 	def rand_pos(self,distance):
 	        '''Picks a random position for the observer a given distance away from the center'''
