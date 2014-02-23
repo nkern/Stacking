@@ -88,7 +88,7 @@ class universal:
 		Gal_V = []
 		Gal_P = []
 		for k in self.stack_range:
-			galdata = self.load_galaxies(HaloID[k],HaloData.T[k])
+			galdata = self.load_galaxies(HaloID[k],HaloData.T[k],R_crit200[k])
 			# unpack array galdata into namespace
 			gpx,gpy,gpz,gvx,gvy,gvz,gmags,rmags,imags = galdata	
 			gal_p	= np.array([gpx,gpy,gpz],float)
@@ -104,7 +104,7 @@ class universal:
 		
 		return Halo_P,Halo_V,Gal_P,Gal_V,G_Mags,R_Mags,I_Mags,HaloData[0:6]
 
-	def load_galaxies(self,haloid,halodata):
+	def load_galaxies(self,haloid,halodata,r_crit200):
 		''' Loads haloid galaxies from a local directory '''
 		# Unpack array halodata into local namespace
 		m_crit200,r_crit200,z,srad,esrad,hvd,hpx,hpy,hpz,hvx,hvy,hvz = halodata
@@ -253,7 +253,32 @@ class universal:
 		return r,v,gmags,rmags,imags,samp_size
 
 
-	def get_3d(self,Gal_P,Gal_V,G_Mags,R_Mags,I_Mags,gmags,rmags,imags):
+	def Bin_Calc(self,HaloData,varib):
+		'''
+		This function does pre-technique binning analysis
+		'''
+		# Unpack Arrays
+		M_crit200,R_crit200,Z,SRAD,ESRAD,HVD = HaloData
+
+		# Sort Arrays based on specific Binning Method
+
+		# Calculate Bin R200 and Bin HVD, use median
+		BIN_M200,BIN_R200,BIN_HVD = [],[],[]
+		for i in range(varib['halo_num']/varib['line_num']):
+			BIN_M200.append( np.median( M_crit200[i*varib['line_num']:(i+1)*varib['line_num']] ) )
+			BIN_R200.append( np.median( R_crit200[i*varib['line_num']:(i+1)*varib['line_num']] ) )
+			BIN_HVD.append( np.median( HVD[i*varib['line_num']:(i+1)*varib['line_num']] ) )
+	
+		BIN_M200,BIN_R200,BIN_HVD = np.array(BIN_M200),np.array(BIN_R200),np.array(BIN_HVD)
+
+		# Re-pack arrays
+		BinData = np.vstack([BIN_M200,BIN_R200,BIN_HVD])
+
+		return BinData
+
+
+
+	def ss_get_3d(self,Gal_P,Gal_V,G_Mags,R_Mags,I_Mags,gmags,rmags,imags):
 		'''
 		This function retreives the 3D position and velocity data for finalized galaxies in phase spaces for a given Halo.
 		It matches the galaxies using the magnitude as a key, b/c rarely are magnitudes degenerate, however, sometimes they are.
@@ -281,7 +306,6 @@ class universal:
 		gvx3d,gvy3d,gvz3d = Gal_V[0][select],Gal_V[1][select],Gal_V[2][select]
 
 		return gpx3d,gpy3d,gpz3d,gvx3d,gvy3d,gvz3d
-
 
 
 

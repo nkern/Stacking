@@ -3,7 +3,7 @@ import matplotlib.pyplot as mp
 import numpy.ma as ma
 import numpy as np
 
-file = open('extended_table_analysis_2124halo.pkl','rb')
+file = open('table_analysis_binstack_run_table2.pkl','rb')
 input = pkl.Unpickler(file)
 data = input.load()
 
@@ -38,8 +38,8 @@ axes.plot(RICH_NUM[4],ENS_MSCAT[4],'DarkSlateGrey',alpha=.8)
 p6, = axes.plot(IND_RICH,IND_MSCAT,'ko',ms=8,alpha=.8)
 axes.plot(IND_RICH,IND_MSCAT,'k',lw=3,alpha=.4)
 axes.set_xlabel('Ensemble Richness, N, within R200',fontsize=14)
-axes.set_ylabel('Mass Estimate Percent Scatter',fontsize=14)
-axes.set_title('Self Stacked Ensemble Mass Scatter (2124 Halos) 12/23/13')
+axes.set_ylabel('Mass Estimate Scatter',fontsize=14)
+axes.set_title('Bin Stacked Ensemble Mass Scatter (2100 Halos) 2/20/14')
 axes.legend([p1,p2,p3,p4,p5,p6],["N=5, 2<LOS<100","N=10, 2<LOS<100","N=15, 2<LOS<100","N=25, 2<LOS<100","N=50, 2<LOS<100","Gifford 2013"],loc=1)
 axes.set_xlim(-10,1000)
 axes.set_ylim(0,1.0)
@@ -63,7 +63,7 @@ axes.plot(RICH_NUM[4],ENS_MBIAS[4],'DarkSlateGrey',alpha=.7)
 p6 = mp.errorbar(IND_RICH,IND_MBIAS,yerr=IND_MBIAS_ERR,lw=2,c='k',alpha=.6)
 axes.set_xlabel('Ensemble Richness within R200',fontsize=14)
 axes.set_ylabel('Mass Estimate Bias',fontsize=14)
-axes.set_title('Self Stacked Ensemble Mass Bias (2124 Halos) 12/23/13')
+axes.set_title('Bin Stacked Ensemble Mass Bias (2100 Halos) 2/20/14')
 axes.legend([p1,p2,p3,p4,p5,p6],["N=5, 2<LOS<100","N=10, 2<LOS<100","N=15, 2<LOS<100","N=25, 2<LOS<100","N=50, 2<LOS<100","Gifford 2013"],loc=7)
 axes.set_ylim(-.9,.1)
 axes.set_xlim(0,300)
@@ -112,6 +112,32 @@ axes.set_xlim(0,160)
 axes.set_ylim(-1.,.1)
 axes.locator_params(axis='both',nbins=12)
 ##
+
+### ENS_MBIAS Density Map
+mp.figure()
+mp.imshow(ENS_MBIAS,cmap='jet')
+cbar = mp.colorbar()
+cbar.set_label('Mass Bias',fontsize=12)
+mp.grid()
+mp.xticks([0,1,2,3,4,5,6],[2,5,10,15,25,50,100])
+mp.yticks([0,1,2,3,4,5,6],[5,10,15,25,50,100,150])
+mp.xlabel('Clusters per Bin (LOS)',fontsize=15)
+mp.ylabel('Galaxies per Cluster (Ngal)',fontsize=15)
+mp.title('Run Table Ensemble Mass Bias Density Plot')
+
+### ENS_MSCAT Density Map
+mp.figure()
+mp.imshow(ENS_MSCAT,cmap='jet')
+cbar = mp.colorbar()
+cbar.set_label('Mass Scatter',fontsize=12)
+mp.grid()
+mp.xticks([0,1,2,3,4,5,6],[2,5,10,15,25,50,100])
+mp.yticks([0,1,2,3,4,5,6],[5,10,15,25,50,100,150])
+mp.xlabel('Clusters per Bin (LOS)',fontsize=15)
+mp.ylabel('Galaxies per Cluster (Ngal)',fontsize=15)
+mp.title('Run Table Ensemble Mass Scatter Density Plot')
+
+
 
 
 mp.show()

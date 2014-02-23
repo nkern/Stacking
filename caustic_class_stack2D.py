@@ -45,7 +45,7 @@ class Stack:
 		m_crit200,r_crit200,z,srad,esrad,hvd = halodata
 		# If working on ensembles (not LOS) for bin stack, define r200 and hvd as bin r200 and hvd
 		if self.self_stack == False and l == None:
-			r_crit200,hvd = bindata
+			m_crit200,r_crit200,hvd = bindata
 
 		## Print Details
 		if l == None:
@@ -454,7 +454,7 @@ class BinStack:
 		''' Building Ensemble Cluster and Calculating Property Statistics '''
 		## Unpack HaloData array 
 		M_crit200,R_crit200,Z,SRAD,ESRAD,HVD = HaloData
-		BIN_R200,BIN_HVD = BinData
+		BIN_M200,BIN_R200,BIN_HVD = BinData
 
 		## Define Arrays for Building Ensemble and LOS
 		# Ensemble Arrays:	[Successive Ensemble Number][Data]
@@ -579,29 +579,6 @@ class BinStack:
 
 		return ens_r,ens_v,ens_gmags,ens_rmags,ens_imags,ens_hvd,ens_caumass,ens_caumass_est,ens_causurf,ens_nfwsurf,los_r,los_v,los_gmags,los_rmags,los_imags,los_hvd,los_caumass,los_caumass_est,los_causurf,los_nfwsurf,self.C.x_range,sample_size,pro_pos	
 
-
-
-	def Bin_Calc(self,HaloData,varib):
-		'''
-		This function does pre-technique binning analysis
-		'''
-		# Unpack Arrays
-		M_crit200,R_crit200,Z,SRAD,ESRAD,HVD = HaloData
-
-		# Sort Arrays based on specific Binning Method
-
-		# Calculate Bin R200 and Bin HVD, use median
-		BIN_R200,BIN_HVD = [],[]
-		for i in range(varib['halo_num']/varib['line_num']):
-			BIN_R200.append( np.median( R_crit200[i*varib['line_num']:(i+1)*varib['line_num']] ) )
-			BIN_HVD.append( np.median( HVD[i*varib['line_num']:(i+1)*varib['line_num']] ) )
-	
-		BIN_R200,BIN_HVD = np.array(BIN_R200),np.array(BIN_HVD)
-
-		# Re-pack arrays
-		BinData = np.vstack([BIN_R200,BIN_HVD])
-
-		return BinData
 
 
 			

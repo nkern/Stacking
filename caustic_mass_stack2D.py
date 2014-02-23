@@ -46,7 +46,6 @@ fbeta		= 0.65				# fbeta value, see 'Diaferio 1999'
 r_limit 	= 1.5				# Radius Cut Scaled by R200
 v_limit		= 3500.0			# Velocity Cut in km/s
 data_set	= 'Guo30_2'			# Data set to draw semi analytic data from
-data_loc	= 'binstack_run_table2'		# Parent Directory where write_loc directories live
 halo_num	= 2100				# Total number of halos loaded
 run_time	= time.asctime()		# Time when program was started
 
@@ -57,6 +56,13 @@ gal_num		= int(sys.argv[3])		# Number of galaxies taken per line of sight
 line_num	= int(sys.argv[4])		# Number of lines of sight to stack over
 method_num	= int(sys.argv[5])		# Ensemble Build Method Number
 cell_num	= sys.argv[6]			# Cell Number ID corresponding to given gal_num & line_num geometry in a Run Table
+table_num	= int(sys.argv[7])		# Table Re-Run Version	
+data_loc	= 'binstack_run_table'+str(table_num)	# Parent Directory where write_loc directories live
+try: 
+	if sys.argv[8]:
+		run_los=bool(sys.argv[8])	# If fed 8th arg value as True, run_los
+except:
+	pass
 
 if use_flux == True: 
 	root=str('/nfs/christoq_ls')		# Change directory scheme if using flux or sophie
@@ -70,6 +76,8 @@ else:
 	write_loc = 'bs_m'+str(method_num)+'_run'+str(cell_num)			# Bin Stack data-write location
 	stack_range = np.arange(run_num*clus_num*line_num,run_num*clus_num*line_num+clus_num*line_num)
 
+if run_los:
+	write_loc += '_los'
 
 ## Make dictionary for above constants
 varib = {'c':c,'h':h,'H0':H0,'q':q,'beta':beta,'fbeta':fbeta,'r_limit':r_limit,'v_limit':v_limit,'data_set':data_set,'halo_num':halo_num,'gal_num':gal_num,'line_num':line_num,'method_num':method_num,'write_loc':write_loc,'data_loc':data_loc,'root':root,'self_stack':self_stack,'scale_data':scale_data,'use_flux':use_flux,'write_data':write_data,'light_cone':light_cone,'run_time':run_time,'clean_ens':clean_ens,'small_set':small_set,'run_los':run_los,'run_num':run_num,'clus_num':clus_num,'cell_num':cell_num,'stack_range':stack_range}
@@ -113,8 +121,8 @@ else:
 #	- Change order of halos to bin upon
 #	- Create any other arrays needed
 if self_stack == False:
-	BinData = BS.Bin_Calc(HaloData,varib)
-	BIN_R200,BIN_HVD = BinData
+	BinData = U.Bin_Calc(HaloData,varib)
+	BIN_M200,BIN_R200,BIN_HVD = BinData
 
 # Initialize Multi-Ensemble Array to hold resultant data
 STACK_DATA = []
@@ -165,8 +173,6 @@ if write_data == True:
 		output = pkl.Pickler(pkl_file)
 		output.dump(STACK_DATA[m])
 		output.dump(varib)
-		if self_stack == False:
-			output.dump(BinData)
 		pkl_file.close()
 	
 	U.print_separation('#...Finished Data Write',type=2)
