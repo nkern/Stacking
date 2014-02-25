@@ -323,6 +323,7 @@ class universal:
 		print "small_set		=",varib['small_set']
 		print "self_stack		=",varib['self_stack']
 		print "write_data		=",varib['write_data']
+		print "run_los			=",varib['run_los']
 		return	
 
 	def print_separation(self,text,type=1):

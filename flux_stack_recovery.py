@@ -14,6 +14,7 @@ import sys
 from AttrDict import AttrDict
 import os.path
 from caustic_universal_stack2D import universal
+from caustic_class_stack2D import SelfStack,BinStack
 import warnings
 import scipy as sc
 from numpy import random
@@ -21,7 +22,7 @@ from numpy import random
 ## Flags ##
 use_flux	= True				# Running on flux or sophie?
 get_los		= True				# Upload Line of Sight Data as well?
-data_loc	= 'selfstack_run_table'		# Parent directory where write_loc lives
+data_loc	= 'binstack_run_table2'		# Parent directory where write_loc lives
 write_loc	= 'ss_m1_run1'			# Which directory within data_loc to load ensembles from?
 
 if use_flux == True:
@@ -34,14 +35,14 @@ warnings.filterwarnings("module",message="Warning: converting a masked element t
 
 
 ## Functions ##
-class Recover():
+class Recover(universal):
 	'''This class contains functions that recover serialized data'''
 
 	def __init__(self):
 		pass
+	
+	def recover(self,write_loc=write_loc,raw_data=False,ss=True,go_global=True,ens_only=True,data_loc=None):
 
-
-	def recover(self,write_loc=write_loc,raw_data=False,ss=True,go_global=True,ens_only=False,data_loc=None):
 		"""
 		This function uploads the pickle files from directory stack_data and configures them into multi dimensional arrays.
 		It is meant to work with the self-stacked ensembles.
@@ -54,6 +55,7 @@ class Recover():
 
 		## Load Data ##
 		# Make wanted variables global
+		self.ss = ss
 
 		# Create them as lists
 		ENS_CAUMASS,ENS_CAUMASS_EST,ENS_CAUSURF,ENS_NFWSURF,LOS_CAUMASS,LOS_CAUMASS_EST,LOS_CAUSURF,LOS_NFWSURF = [],[],[],[],[],[],[],[]
@@ -62,14 +64,17 @@ class Recover():
 
 		# Initialization step 
 		if data_loc==None:	
-			if ss:	data_loc = 'selfstack_run_table'
-			else:	data_loc = 'binstack_run_table'
+			if self.ss:	data_loc = 'selfstack_run_table'
+			else:	data_loc = 'binstack_run_table2'
 
 		pkl_file = open(root+'/nkern/Stacking/'+data_loc+'/'+write_loc+'/Ensemble_'+str(0)+'_Data.pkl','rb')
 		input = pkl.Unpickler(pkl_file)
 		stack_data 			= input.load()
 		varib				= input.load()
-		if ss:	self.halo_range = range(2124)
+
+		self.__dict__.update(varib)
+		self.U = universal(varib)
+		if self.ss:	self.halo_range = range(2124)
 		else:	self.halo_range = range(varib['halo_num']/varib['line_num'])
 
 		ens_r,ens_v,ens_gmags,ens_rmags,ens_imags,ens_hvd,ens_caumass,ens_caumass_est,ens_causurf,ens_nfwsurf,los_r,los_v,los_gmags,los_rmags,los_imags,los_hvd,los_caumass,los_caumass_est,los_causurf,los_nfwsurf,x_range,sample_size,pro_pos,gpx3d,gpy3d,gpz3d,gvx3d,gvy3d,gvz3d = stack_data
@@ -181,8 +186,6 @@ class Recover():
 		GVZ3D = np.array(GVZ3D)
 
 		## Get Halo Data
-		# Initialize universal class
-		self.U = universal(varib)
 		# Load and Sort Halos by Mass
 		HaloID,HaloData = self.U.load_halos()
 		HaloID,HaloData = self.U.sort_halos(HaloID,HaloData)
@@ -192,13 +195,24 @@ class Recover():
 		Halo_P = np.vstack([HPX,HPY,HPZ])
 		Halo_V = np.vstack([HVX,HVY,HVZ])
 
+		# Make Bin Arrays if ss == False
+		if self.ss == False:
+			BinData = self.U.Bin_Calc(HaloData[0:6],varib)
+			BIN_M200,BIN_R200,BIN_HVD = BinData
+
 		if raw_data == True:
 			# Return to Namespaces depending on go_global
 			names = ['varib','HaloID','Halo_P','Halo_V','GPX3D','GPY3D','GPZ3D','GVX3D','GVY3D','GVZ3D','M_crit200','R_crit200','Z','SRAD','ESRAD','HVD','x_range','ENS_CAUMASS','ENS_CAUMASS_EST','ENS_CAUSURF','ENS_NFWSURF','LOS_CAUMASS','LOS_CAUMASS_EST','LOS_CAUSURF','LOS_NFWSURF','ENS_R','ENS_V','ENS_GMAGS','ENS_RMAGS','ENS_IMAGS','LOS_R','LOS_V','LOS_GMAGS','LOS_RMAGS','LOS_IMAGS','ENS_HVD','LOS_HVD','SAMS','PRO_POS']
 			data = [varib,HaloID,Halo_P,Halo_V,GPX3D,GPY3D,GPZ3D,GVX3D,GVY3D,GVZ3D,M_crit200,R_crit200,Z,SRAD,ESRAD,HVD,x_range,ENS_CAUMASS,ENS_CAUMASS_EST,ENS_CAUSURF,ENS_NFWSURF,LOS_CAUMASS,LOS_CAUMASS_EST,LOS_CAUSURF,LOS_NFWSURF,ENS_R,ENS_V,ENS_GMAGS,ENS_RMAGS,ENS_IMAGS,LOS_R,LOS_V,LOS_GMAGS,LOS_RMAGS,LOS_IMAGS,ENS_HVD,LOS_HVD,SAMS,PRO_POS]
 			mydict = dict( zip(names,data) )
+
+			# Append Bin Arrays if bin stack
+			if self.ss == False:
+				mydict.update({'BIN_M200':BIN_M200,'BIN_R200':BIN_R200,'BIN_HVD':BIN_HVD})	
+
 			if go_global == True:
 				globals().update(mydict)
+				globals().update(varib)
 				return
 			elif go_global == False:
 				return  mydict	
@@ -206,32 +220,38 @@ class Recover():
 		################################
 		### Statistical Calculations ###
 		################################
-		if ss:
+		if self.ss:
 			ENS_MFRAC,ens_mbias,ens_mscat,ENS_VFRAC,ens_vbias,ens_vscat = self.stat_calc(ENS_CAUMASS,M_crit200,ENS_HVD,HVD)
 			if ens_only == True:
 				LOS_MFRAC,los_mbias,los_mscat,LOS_VFRAC,los_vbias,los_vscat = None,None,None,None,None,None
 			else:
-				LOS_MFRAC,los_mbias,los_mscat,LOS_VFRAC,los_vbias,los_vscat = self.stat_calc(LOS_CAUMASS,M_crit200,LOS_HVD,HVD,ens=False)
+				LOS_MFRAC,los_mbias,los_mscat,LOS_VFRAC,los_vbias,los_vscat = self.stat_calc(LOS_CAUMASS.ravel(),M_crit200[0:self.halo_num],LOS_HVD.ravel(),HVD[0:self.halo_num],ens=False)
 		else:
 			ENS_MFRAC,ens_mbias,ens_mscat,ENS_VFRAC,ens_vbias,ens_vscat = self.stat_calc(ENS_CAUMASS,BIN_M200,ENS_HVD,BIN_HVD)
 			if ens_only == True:
-				LOS_MFRAC,los_mbias,los_mscat,LOS_VFRAC,los_vbias,los_vscat = None,None,None,None
+				LOS_MFRAC,los_mbias,los_mscat,LOS_VFRAC,los_vbias,los_vscat = None,None,None,None,None,None
 			else:
-				LOS_MFRAC,los_mbias,los_mscat,LOS_VFRAC,los_vbias,los_vscat = self.stat_calc(LOS_CAUMASS,M_crit200,LOS_HVD,HVD,ens=False)
+				LOS_MFRAC,los_mbias,los_mscat,LOS_VFRAC,los_vbias,los_vscat = self.stat_calc(LOS_CAUMASS.ravel(),M_crit200[0:self.halo_num],LOS_HVD.ravel(),HVD[0:self.halo_num],ens=False)
 
 
 		# Return to Namespaces depending on go_global
 		names = ['varib','HaloID','Halo_P','Halo_V','GPX3D','GPY3D','GPZ3D','GVX3D','GVY3D','GVZ3D','M_crit200','R_crit200','Z','SRAD','ESRAD','HVD','x_range','ENS_CAUMASS','ENS_CAUMASS_EST','ENS_CAUSURF','ENS_NFWSURF','LOS_CAUMASS','LOS_CAUMASS_EST','LOS_CAUSURF','LOS_NFWSURF','ENS_R','ENS_V','ENS_GMAGS','ENS_RMAGS','ENS_IMAGS','LOS_R','LOS_V','LOS_GMAGS','LOS_RMAGS','LOS_IMAGS','ENS_HVD','LOS_HVD','SAMS','PRO_POS','ens_mbias','ens_mscat','los_mbias','los_mscat','ens_vbias','ens_vscat','los_vbias','los_vscat','ENS_MFRAC','ENS_VFRAC','LOS_MFRAC','LOS_VFRAC']
 		data = [varib,HaloID,Halo_P,Halo_V,GPX3D,GPY3D,GPZ3D,GVX3D,GVY3D,GVZ3D,M_crit200,R_crit200,Z,SRAD,ESRAD,HVD,x_range,ENS_CAUMASS,ENS_CAUMASS_EST,ENS_CAUSURF,ENS_NFWSURF,LOS_CAUMASS,LOS_CAUMASS_EST,LOS_CAUSURF,LOS_NFWSURF,ENS_R,ENS_V,ENS_GMAGS,ENS_RMAGS,ENS_IMAGS,LOS_R,LOS_V,LOS_GMAGS,LOS_RMAGS,LOS_IMAGS,ENS_HVD,LOS_HVD,SAMS,PRO_POS,ens_mbias,ens_mscat,los_mbias,los_mscat,ens_vbias,ens_vscat,los_vbias,los_vscat,ENS_MFRAC,ENS_VFRAC,LOS_MFRAC,LOS_VFRAC]
 		mydict = dict( zip(names,data) )
+
+		# Append Bin Arrays if bin stack
+		if self.ss == False:
+			mydict.update({'BIN_M200':BIN_M200,'BIN_R200':BIN_R200,'BIN_HVD':BIN_HVD})	
+
 		if go_global == True:
 			globals().update(mydict)
+			globals().update(varib)
 			return
 		elif go_global == False:
 			return  mydict	
 
 
-	def stat_calc(self,MASS_EST,MASS_TRUE,HVD_EST,HVD_TRUE,ens=True):
+	def stat_calc(self,MASS_EST,MASS_TRUE,HVD_EST,HVD_TRUE,data_set='full',ens=True):
 		''' Does bias and scatter calculations '''
 		# Define a Masked array for sometimes zero terms
 		epsilon = 10.0
@@ -239,15 +259,17 @@ class Recover():
 		maMASS_EST	= ma.masked_array(MASS_EST,mask=MASS_EST<epsilon)		# Mask essentially zero values
 		maHVD_EST	= ma.masked_array(HVD_EST,mask=HVD_EST<epsilon)
 
+		# 
+
 		# Mass / HVD Fractions
 		if ens == True:
 			# Ensemble Arrays
-			MFRAC = maMASS_EST/MASS_TRUE
-			VFRAC = maHVD_EST/HVD_TRUE
+			MFRAC = np.log(maMASS_EST/MASS_TRUE)
+			VFRAC = np.log(maHVD_EST/HVD_TRUE)
 		else:
 			# LOS Mass Fraction Arrays: 0th axis is halo number, 1st axis is line of sight number
 			MFRAC,VFRAC = [],[]
-			for a in self.halo_range:
+			for a in range(self.halo_num):
 				MFRAC.append( ma.log( maMASS_EST[a]/MASS_TRUE[a] ) )
 				VFRAC.append( ma.log( maHVD_EST[a]/HVD_TRUE[a] ) )
 			MFRAC,VFRAC = np.array(MFRAC),np.array(VFRAC)
@@ -257,32 +279,40 @@ class Recover():
 			vbias,vscat = astStats.biweightLocation(VFRAC,6.0),astStats.biweightScale(VFRAC,9.0)
 			return MFRAC,mbias,mscat,VFRAC,vbias,vscat
 		else:
-			# Create vertically averaged (by halo averaged) arrays, with line_num elements
-			# biweightLocation takes only arrays with 4 or more elements
-			HORZ_MFRAC,HORZ_VFRAC = [],[]
-			VERT_MFRAC,VERT_VFRAC = [],[]
-			for a in range(varib['line_num']):
-				if len(ma.compressed(maMASS_EST[a])) > 4:
-					VERT_MFRAC.append( astStats.biweightLocation( ma.compressed( MFRAC[:,a] ), 6.0 ) )
-					VERT_VFRAC.append( astStats.biweightLocation( ma.compressed( VFRAC[:,a] ), 6.0 ) )
-				else:
-					VERT_MFRAC.append( np.median( ma.compressed( MFRAC[:,a] ) ) )
-					VERT_VFRAC.append( np.median( ma.compressed( VFRAC[:,a] ) ) )
-			VERT_MFRAC,VERT_VFRAC = np.array(VERT_MFRAC),np.array(VERT_VFRAC)
-			# Create horizontally averaged (by line of sight) arrays, with halo_num elements
-			for a in self.halo_range:
-				if len(ma.compressed(maMASS_EST[a])) > 4:
-					HORZ_MFRAC.append( astStats.biweightLocation( ma.compressed( LOS_MFRAC[a] ), 6.0 ) )
-					HORZ_VFRAC.append( astStats.biweightLocation( ma.compressed( LOS_VFRAC[a] ), 6.0 ) )
-				else:
-					HORZ_MFRAC.append( np.median( ma.compressed( MFRAC[a] ) ) )
-					HORZ_VFRAC.append( np.median( ma.compressed( VFRAC[a] ) ) )
-			HORZ_MFRAC,HORZ_VFRAC = np.array(HORZ_MFRAC),np.array(HORZ_VFRAC)
-			# Bias and Scatter Calculations
-			mbias,mscat = astStats.biweightLocation(VERT_MFRAC,6.0),astStats.biweightScale(VERT_MFRAC,9.0)
-			vbias,vscat = astStats.biweightLocation(VERT_VFRAC,6.0),astStats.biweightScale(VERT_VFRAC,9.0)
+			if self.ss:
+				# Create vertically averaged (by halo averaged) arrays, with line_num elements
+				# biweightLocation takes only arrays with 4 or more elements
+				HORZ_MFRAC,HORZ_VFRAC = [],[]
+				VERT_MFRAC,VERT_VFRAC = [],[]
+				for a in range(self.line_num):
+					if len(ma.compressed(MFRAC[:,a])) > 4:
+						VERT_MFRAC.append( astStats.biweightLocation( ma.compressed( MFRAC[:,a] ), 6.0 ) )
+						VERT_VFRAC.append( astStats.biweightLocation( ma.compressed( VFRAC[:,a] ), 6.0 ) )
+					else:
+						VERT_MFRAC.append( np.median( ma.compressed( MFRAC[:,a] ) ) )
+						VERT_VFRAC.append( np.median( ma.compressed( VFRAC[:,a] ) ) )
+				VERT_MFRAC,VERT_VFRAC = np.array(VERT_MFRAC),np.array(VERT_VFRAC)
+				# Create horizontally averaged (by line of sight) arrays, with halo_num elements
+				for a in self.halo_range:
+					if len(ma.compressed(MFRAC[a])) > 4:
+						HORZ_MFRAC.append( astStats.biweightLocation( ma.compressed( MFRAC[a] ), 6.0 ) )
+						HORZ_VFRAC.append( astStats.biweightLocation( ma.compressed( VFRAC[a] ), 6.0 ) )
+					else:
+						HORZ_MFRAC.append( np.median( ma.compressed( MFRAC[a] ) ) )
+						HORZ_VFRAC.append( np.median( ma.compressed( VFRAC[a] ) ) )
+				HORZ_MFRAC,HORZ_VFRAC = np.array(HORZ_MFRAC),np.array(HORZ_VFRAC)
+				# Bias and Scatter Calculations
+				mbias,mscat = astStats.biweightLocation(VERT_MFRAC,6.0),astStats.biweightScale(VERT_MFRAC,9.0)
+				vbias,vscat = astStats.biweightLocation(VERT_VFRAC,6.0),astStats.biweightScale(VERT_VFRAC,9.0)
+			else:
+				# Bin stack LOS systems need only one average
+				mbias,mscat = astStats.biweightLocation(MFRAC,6.0),astStats.biweightScale(MFRAC,9.0)
+				vbias,vscat = astStats.biweightLocation(VFRAC,6.0),astStats.biweightScale(VFRAC,9.0)
+
 			return MFRAC,mbias,mscat,VFRAC,vbias,vscat
-		
+	
+
+	
 
 
 class Work(Recover):
@@ -291,64 +321,78 @@ class Work(Recover):
 	def __init__(self,Recover):
 		pass	
 	
-	def append_data(self,write_loc,i):
+	def append_data(self,kwargs,i):
 		''' This function was created so as to reclaim the mydict dictionary memory after exiting the function.'''
 		
 		# Load in Data from Run Table and append
-		mydict = self.recover(write_loc=write_loc,go_global=False)
+		mydict = self.recover(**kwargs)
 		d = AttrDict(mydict)
-		RUN_NUM.append(i)
-		GAL_NUM.append(d.varib['gal_num'])
-		LINE_NUM.append(d.varib['line_num'])
-		ENS_MBIAS.append(d.ens_mbias)
-		ENS_MSCAT.append(d.ens_mscat)
-		ENS_VBIAS.append(d.ens_vbias)
-		ENS_VSCAT.append(d.ens_vscat)
-		LOS_MBIAS.append(d.los_mbias)
-		LOS_MSCAT.append(d.los_mscat)
-		LOS_VBIAS.append(d.los_vbias)
-		LOS_VSCAT.append(d.los_vscat)	
+		self.RUN_NUM.append(i)
+		self.GAL_NUM.append(d.varib['gal_num'])
+		self.LINE_NUM.append(d.varib['line_num'])
+		self.ENS_MBIAS.append(d.ens_mbias)
+		self.ENS_MSCAT.append(d.ens_mscat)
+		self.ENS_VBIAS.append(d.ens_vbias)
+		self.ENS_VSCAT.append(d.ens_vscat)
+		self.LOS_MBIAS.append(d.los_mbias)
+		self.LOS_MSCAT.append(d.los_mscat)
+		self.LOS_VBIAS.append(d.los_vbias)
+		self.LOS_VSCAT.append(d.los_vscat)	
 
 
-	def load_all(self,iter_array=None,tab_shape=None):
+	def load_all(self,iter_array=None,tab_shape=None,ens_only=True):
 		'''
 		This iterates over different richness geometry configurations and runs statistics on data.
 		It is recommended to do any calculations (statistics, plots etc.) within the for loop, and
 		then feed results back out via a global variable.
 		'''
-
+		# Feed Local Variables
+		self.ens_only = ens_only	
+	
 		# Configure Variables
 		if iter_array == None:
 			iter_array = np.arange(1,50)
 			tab_shape = (7,7)
 
-		# Define globals
-		global ENS_MBIAS,ENS_MSCAT,ENS_VBIAS,ENS_VSCAT,LOS_MBIAS,LOS_MSCAT,LOS_VBIAS,LOS_VSCAT
-		global RUN_NUM,GAL_NUM,LINE_NUM,RICH_NUM
+		
+		## Calculate Ensemble Only Statistics
+		if self.ens_only == True:
 
-		# Create arrays
-		ENS_MBIAS,ENS_MSCAT,ENS_VBIAS,ENS_VSCAT = [],[],[],[]
-		LOS_MBIAS,LOS_MSCAT,LOS_VBIAS,LOS_VSCAT = [],[],[],[]
-		RUN_NUM,GAL_NUM,LINE_NUM = [],[],[]
+			# Create arrays
+			self.ENS_MBIAS,self.ENS_MSCAT,self.ENS_VBIAS,self.ENS_VSCAT = [],[],[],[]
+			self.LOS_MBIAS,self.LOS_MSCAT,self.LOS_VBIAS,self.LOS_VSCAT = [],[],[],[]
+			self.RUN_NUM,self.GAL_NUM,self.LINE_NUM = [],[],[]
 
-		# Iterate over runs
-		print '...Loading Data from '+str(len(iter_array))+' runs'
-		for i in iter_array:
-			print ''
-			print 'Working on Run #'+str(i)
-			print '-'*25
-			write_loc = 'ss_m1_run'+str(i)
-			self.append_data(write_loc,i)
+			# Iterate over runs for ensemble data
+			print '...Loading Data from '+str(len(iter_array))+' runs'
+			for i in iter_array:
+				print ''
+				print 'Working on Run #'+str(i)
+				print '-'*25
+				## Define Recover Keyword Arguments!  ##
+				kwargs = {'write_loc':'bs_m0_run'+str(i),'raw_data':False,'ss':False,'go_global':False,'ens_only':True,'data_loc':'binstack_run_table2'}
+				print 'Recover Keyword Arguments:'
+				print '-'*40
+				print kwargs
+				
+				## Load and Append Data		
+				self.append_data(kwargs,i)
 
-		# Make into arrays that resemble table
-		print 'Table Shape =',tab_shape
-		ENS_MBIAS,ENS_MSCAT,ENS_VBIAS,ENS_VSCAT = np.array(ENS_MBIAS).reshape(tab_shape),np.array(ENS_MSCAT).reshape(tab_shape),np.array(ENS_VBIAS).reshape(tab_shape),np.array(ENS_VSCAT).reshape(tab_shape)
-		LOS_MBIAS,LOS_MSCAT,LOS_VBIAS,LOS_VSCAT = np.array(LOS_MBIAS).reshape(tab_shape),np.array(LOS_MSCAT).reshape(tab_shape),np.array(LOS_VBIAS).reshape(tab_shape),np.array(LOS_VSCAT).reshape(tab_shape)
-		RUN_NUM,GAL_NUM,LINE_NUM = np.array(RUN_NUM).reshape(tab_shape),np.array(GAL_NUM).reshape(tab_shape),np.array(LINE_NUM).reshape(tab_shape) 
+			# Make into arrays that resemble table
+			print 'Table Shape =',tab_shape
+			ENS_MBIAS,ENS_MSCAT,ENS_VBIAS,ENS_VSCAT = np.array(self.ENS_MBIAS).reshape(tab_shape),np.array(self.ENS_MSCAT).reshape(tab_shape),np.array(self.ENS_VBIAS).reshape(tab_shape),np.array(self.ENS_VSCAT).reshape(tab_shape)
+			LOS_MBIAS,LOS_MSCAT,LOS_VBIAS,LOS_VSCAT = np.array(self.LOS_MBIAS).reshape(tab_shape),np.array(self.LOS_MSCAT).reshape(tab_shape),np.array(self.LOS_VBIAS).reshape(tab_shape),np.array(self.LOS_VSCAT).reshape(tab_shape)
+			RUN_NUM,GAL_NUM,LINE_NUM = np.array(self.RUN_NUM).reshape(tab_shape),np.array(self.GAL_NUM).reshape(tab_shape),np.array(self.LINE_NUM).reshape(tab_shape) 
 
-		# Other Data Arrays
-		RICH_NUM = GAL_NUM*LINE_NUM
-		return
+			# Other Data Arrays
+			RICH_NUM = GAL_NUM*LINE_NUM
+
+			return (ENS_MBIAS,ENS_MSCAT,ENS_VBIAS,ENS_VSCAT,LOS_MBIAS,LOS_MSCAT,LOS_VBIAS,LOS_VSCAT,RUN_NUM,GAL_NUM,LINE_NUM,RICH_NUM)
+
+
+		else:
+			pass
+
 
 	def oto(self,xarray,yarray,style='ko',alpha=None):
 		'''Simple log log one to one plot setup'''
@@ -379,45 +423,31 @@ class Work(Recover):
 			ax.legend([p1,p2,p3,p4],["Table Mass","Median","Mean","biweightLocation"],fontsize=8)
 
 
+
+###############################################################
+############## END CLASSES, BEGIN PROGRAM #####################
+###############################################################
+
+
 ## Initialize Classes
 R = Recover()
 W = Work(Recover)
 
 work = False
 if work == True:
-	W.load_all()
-	data=(ENS_MBIAS,ENS_MSCAT,ENS_VBIAS,ENS_VSCAT,LOS_MBIAS,LOS_MSCAT,LOS_VBIAS,LOS_VSCAT,RUN_NUM,GAL_NUM,LINE_NUM,RICH_NUM)
-	file = open('extended_table_analysis_2124halo.pkl','wb')
-	output = pkl.Pickler(file)
+	data = W.load_all()
+
+	names = ('ENS_MBIAS','ENS_MSCAT','ENS_VBIAS','ENS_VSCAT','LOS_MBIAS','LOS_MSCAT','LOS_VBIAS','LOS_VSCAT','RUN_NUM','GAL_NUM','LINE_NUM','RICH_NUM')
+
+	values = np.copy(data)
+
+	dictionary = dict(zip(names,values))
+
+	file = open('binstack_run_table2_analysis.pkl','wb')
+
+	output = pkl.Pickler(dictionary)
+
 	output.dump(data)
-
-
-
-## Histogram Plots
-'''
-## Configure LOS_CAUMASS data
-LOS_MFRAC = []
-for i in range(2124):
-	LOS_MFRAC.extend(ma.compressed(maLOS_CAUMASS[i])/M_crit200[i])
-LOS_MFRAC = np.array(LOS_MFRAC)
-
-## Mass Fraction Histrogram
-fig = mp.figure()
-ax = fig.add_subplot(111)
-hdat2 = ax.hist(LOS_MFRAC,normed=True,range=(0,2),bins=100,color='DarkRed',alpha=.5)
-hdat1 = ax.hist(ma.compressed(maENS_CAUMASS/M_crit200),normed=True,range=(0,2),bins=100,color='DarkBlue',alpha=.5)
-p1 = ax.axvline(1.0,ymin=.9,color='k')
-p2 = ax.axvline(astStats.biweightLocation(ma.compressed(maENS_CAUMASS/M_crit200),6.0),ymin=.9,color='b')
-p3 = ax.axvline(astStats.biweightLocation(LOS_MFRAC,6.0),ymin=.9,color='r')
-ax.legend([p1,p2,p3],["Zero Bias","BiWeight of ENS","BiWeight of LOS"])
-ax.set_title('Ensemble Mass Fractions and LOS Mass Fractions for N='+str(varib['gal_num'])+',LOS='+str(varib['line_num'])+'',fontsize=12)
-ax.set_xlabel('Mass Estimate Fraction Over Table M200',fontsize=14)
-mp.show()
-
-
-'''
-
-
 
 
 

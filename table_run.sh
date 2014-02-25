@@ -18,7 +18,7 @@ line_num=(2 5 10 15 25 50 100)			# Line of Sight Number
 gal_num=(5 10 15 25 50 100 150)			# Ngal number
 halo_num=2100					# Number of Halos in Sample
 method_num=0					# Ensemble Build Method
-table_num=3					# Version of entire run table
+table_num=8					# Version of entire run table
 data_loc="binstack_run_table$table_num"		# Highest Directory for Data
 
 ## Go To Stacking Directory
@@ -29,7 +29,7 @@ cd /nfs/christoq_ls/nkern/Stacking
 if [ -d $data_loc ]
 	then 
 	echo "Directory: $data_loc , exists..."
-	echo -n "Do you want to continue?(y/s):"
+	echo -n "Do you want to continue?(y/n):"
 	read accept
 	if [ $accept != 'y' ]
 		then echo 'Quitting...'
@@ -38,7 +38,14 @@ if [ -d $data_loc ]
 	else 
 	mkdir $data_loc 
 	echo "Created Directory: $data_loc"
+	echo -n "Continue?(y/n):"
+	read accept
+	if [ $accept != 'y' ]
+		then echo 'Quitting...'
+		exit
+	fi
 fi
+
 # Sub Directory Check (including LOS)
 for i in ${cell_num[*]}
 do
@@ -48,16 +55,6 @@ do
 		echo -n
 		else
 		mkdir $data_loc/$dir	
-	fi
-	# LOS Check
-	let "a=$i%7"
-	if [ $a == 0 ] 
-		then
-		if [ -d $data_loc/$dir"_los" ]
-			then echo -n
-			else
-			mkdir $data_loc/$dir"_los"
-		fi
 	fi
 done
 
@@ -94,19 +91,19 @@ do
 		_job_array="${job_array[$j]}"
 		_data_loc="$data_loc"
 		_write_loc="$write_loc"
-		sed -e "s/@@data_loc@@/$_data_loc/g;s/@@write_loc@@/$_write_loc/g;s/@@job_array@@/$_job_array/g;s/@@clus_num@@/$_clus_num/g;s/@@gal_num@@/$_gal_num/g;s/@@line_num@@/$_line_num/g;s/@@method_num@@/$_method_num/g;s/@@cell_num@@/$_cell_num/g;s/@@table_num@@/$table_num/g;s/@@run_los@@/False/g" < table_flux_stack_pbs.sh > $_data_loc/$_write_loc/script.sh
-		qsub $_data_loc/$_write_loc/script.sh
-		echo ""
+		sed -e "s/@@data_loc@@/$_data_loc/g;s/@@write_loc@@/$_write_loc/g;s/@@job_array@@/$_job_array/g;s/@@clus_num@@/$_clus_num/g;s/@@gal_num@@/$_gal_num/g;s/@@line_num@@/$_line_num/g;s/@@method_num@@/$_method_num/g;s/@@cell_num@@/$_cell_num/g;s/@@table_num@@/$table_num/g;s/@@run_los@@/0/g" < table_flux_stack_pbs.sh > $_data_loc/$_write_loc/script.sh
 
-		# Submit FLUX JOB for LOS if line_num == 100
-		let "a=${cell_num[k]}%7"
+		# Change run_los = True if line_num == 100
+		let "a=${cell_num[$k]}%7"
 		if [ $a == 0 ]
 			then
-			_write_loc="bs_m0_run"${cell_num[$k]}"_los"
-			sed -e "s/@@data_loc@@/$_data_loc/g;s/@@write_loc@@/$_write_loc/g;s/@@job_array@@/$_job_array/g;s/@@clus_num@@/$_clus_num/g;s/@@gal_num@@/$_gal_num/g;s/@@line_num@@/$_line_num/g;s/@@method_num@@/$_method_num/g;s/@@cell_num@@/$_cell_num/g;s/@@table_num@@/$table_num/g;s/@@run_los@@/True/g" < table_flux_stack_pbs.sh > $_data_loc/$_write_loc/script.sh
-			qsub $_data_loc/$_write_loc/script.sh 
-			echo ""
+			sed -e "s/@@data_loc@@/$_data_loc/g;s/@@write_loc@@/$_write_loc/g;s/@@job_array@@/$_job_array/g;s/@@clus_num@@/$_clus_num/g;s/@@gal_num@@/$_gal_num/g;s/@@line_num@@/$_line_num/g;s/@@method_num@@/$_method_num/g;s/@@cell_num@@/$_cell_num/g;s/@@table_num@@/$table_num/g;s/@@run_los@@/1/g" < table_flux_stack_pbs.sh > $_data_loc/$_write_loc/script.sh
 		fi
+
+		# Submit Script to FLUX via qsub
+		qsub $_data_loc/$_write_loc/script.sh 
+		echo ""
+
 		echo '----------------------------------------------------------'
 	done
 done
