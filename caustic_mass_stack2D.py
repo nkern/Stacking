@@ -59,7 +59,7 @@ cell_num	= sys.argv[6]			# Cell Number ID corresponding to given gal_num & line_
 table_num	= int(sys.argv[7])		# Table Re-Run Version	
 data_loc	= 'binstack_run_table'+str(table_num)	# Parent Directory where write_loc directories live
 try: 
-	run_los = bool(sys.argv[8])		# If fed 8th arg value as True, run_los
+	run_los = bool(int(sys.argv[8]))	# If fed 8th arg value as True, run_los
 except:
 	pass
 
