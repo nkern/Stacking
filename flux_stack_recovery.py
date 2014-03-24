@@ -64,7 +64,7 @@ class Recover(universal):
 
 		# Initialization step 
 		if data_loc==None:	
-			if self.ss:	data_loc = 'selfstack_run_table'
+			if self.ss:	data_loc = 'old_selfstack_run_table'
 			else:	data_loc = 'binstack_run_table2'
 
 		pkl_file = open(root+'/nkern/Stacking/'+data_loc+'/'+write_loc+'/Ensemble_'+str(0)+'_Data.pkl','rb')
@@ -171,11 +171,11 @@ class Recover(universal):
 		LOS_GMAGS = np.array(LOS_GMAGS)
 		LOS_RMAGS = np.array(LOS_RMAGS)
 		LOS_IMAGS = np.array(LOS_IMAGS)
-		LOS_HVD = np.array(LOS_HVD)
-		LOS_CAUMASS = np.array(LOS_CAUMASS)
-		LOS_CAUMASS_EST = np.array(LOS_CAUMASS_EST)
-		LOS_CAUSURF = np.array(LOS_CAUSURF)
-		LOS_NFWSURF = np.array(LOS_NFWSURF)
+		LOS_HVD = np.array(LOS_HVD,object)
+		LOS_CAUMASS = np.array(LOS_CAUMASS,object)
+		LOS_CAUMASS_EST = np.array(LOS_CAUMASS_EST,object)
+		LOS_CAUSURF = np.array(LOS_CAUSURF,object)
+		LOS_NFWSURF = np.array(LOS_NFWSURF,object)
 		SAMS = np.array(SAMS)
 		PRO_POS = np.array(PRO_POS)
 		GPX3D = np.array(GPX3D)
@@ -340,7 +340,7 @@ class Work(Recover):
 		self.LOS_VSCAT.append(d.los_vscat)	
 
 
-	def load_all(self,iter_array=None,tab_shape=None,ens_only=True):
+	def load_all(self,iter_array=None,tab_shape=None,ens_only=True,kwargs=None):
 		'''
 		This iterates over different richness geometry configurations and runs statistics on data.
 		It is recommended to do any calculations (statistics, plots etc.) within the for loop, and
@@ -348,6 +348,8 @@ class Work(Recover):
 		'''
 		# Feed Local Variables
 		self.ens_only = ens_only	
+		if kwargs == None:
+			kwargs = {'write_loc':'bs_m0_run1','raw_data':False,'ss':False,'go_global':False,'ens_only':True,'data_loc':'binstack_run_table2'}
 	
 		# Configure Variables
 		if iter_array == None:
@@ -370,7 +372,10 @@ class Work(Recover):
 				print 'Working on Run #'+str(i)
 				print '-'*25
 				## Define Recover Keyword Arguments!  ##
-				kwargs = {'write_loc':'bs_m0_run'+str(i),'raw_data':False,'ss':False,'go_global':False,'ens_only':True,'data_loc':'binstack_run_table2'}
+				kwargs['write_loc'] = 'bs_m0_run'+str(i)
+				kwargs['ens_only'] = True
+				if i%7==0:
+					kwargs['ens_only'] = False	
 				print 'Recover Keyword Arguments:'
 				print '-'*40
 				print kwargs
@@ -435,7 +440,12 @@ W = Work(Recover)
 
 work = False
 if work == True:
-	data = W.load_all()
+	
+	table_num = str(sys.argv[1])
+
+	kwargs = {'write_loc':'bs_m0_run1','raw_data':False,'ss':False,'go_global':False,'ens_only':True,'data_loc':'binstack_run_table'+table_num}
+
+	data = W.load_all(kwargs=kwargs)
 
 	names = ('ENS_MBIAS','ENS_MSCAT','ENS_VBIAS','ENS_VSCAT','LOS_MBIAS','LOS_MSCAT','LOS_VBIAS','LOS_VSCAT','RUN_NUM','GAL_NUM','LINE_NUM','RICH_NUM')
 
@@ -443,11 +453,11 @@ if work == True:
 
 	dictionary = dict(zip(names,values))
 
-	file = open('binstack_run_table2_analysis.pkl','wb')
+	file = open('binstack_run_table'+table_num+'_analysis.pkl','wb')
 
-	output = pkl.Pickler(dictionary)
+	output = pkl.Pickler(file)
 
-	output.dump(data)
+	output.dump(dictionary)
 
 
 

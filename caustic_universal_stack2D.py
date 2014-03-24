@@ -10,7 +10,7 @@ universal:
 ## Import Modules ##
 import CausticMass as cm
 import numpy as np
-import pyfits
+import astropy.io.fits as fits
 import random
 from scipy import weave
 from scipy.weave import converters
@@ -111,12 +111,12 @@ class universal:
 		# load galaxy data
 		if self.small_set == True:
 			# 100 Halo Sample	
-			f = pyfits.open(self.root+'/giffordw/Millenium/30Mpchalos/'+haloid+'.'+self.data_set+'.fits')
+			f = fits.open(self.root+'/giffordw/Millenium/30Mpchalos/'+haloid+'.'+self.data_set+'.fits')
 			data = f[1].data
 			gal_z,gpx,gpy,gpz,gvx,gvy,gvz,gmags,rmags,imags = data.field(13),data.field(17),data.field(18),data.field(19),data.field(20),data.field(21),data.field(22),data.field(62),data.field(63),data.field(64)
 		else:
 			# 2,000 Halo Sample
-			data = pyfits.getdata(self.root+'/nkern/Millennium/Large_Halo_Set/Halo_'+str(haloid)+'.Guo2010.fits')
+			data = fits.getdata(self.root+'/nkern/Millennium/Large_Halo_Set/Halo_'+str(haloid)+'.Guo2010.fits')
 
 			gal_z,gpx,gpy,gpz,gvx,gvy,gvz,gmags,rmags,imags = data.field(3),data.field(6),data.field(7),data.field(8),data.field(9),data.field(10),data.field(11),data.field(14),data.field(15),data.field(16)
 
@@ -233,24 +233,24 @@ class universal:
 
 		return r, v, new_pos
 
-	def limit_gals(self,r,v,gmags,rmags,imags,r200,hvd):
+	def limit_gals(self,r,v,en_gal_id,ln_gal_id,gmags,rmags,imags,r200,hvd):
 		''' Sort data by magnitude, and elimite values outside phase space limits '''
 		# Sort by ascending r magnitude (bright to dim)
 		sorts = np.argsort(rmags)
-		r,v,gmags,rmags,imags = r[sorts],v[sorts],gmags[sorts],rmags[sorts],imags[sorts]
+		r,v,en_gal_id,ln_gal_id,gmags,rmags,imags = r[sorts],v[sorts],en_gal_id[sorts],ln_gal_id[sorts],gmags[sorts],rmags[sorts],imags[sorts]
 
 		# Limit Phase Space
 		sample = np.where( (r < r200*self.r_limit) & (v > -self.v_limit) & (v < self.v_limit) )[0] 
-		r,v,gmags,rmags,imags = r[sample],v[sample],gmags[sample],rmags[sample],imags[sample]
+		r,v,en_gal_id,ln_gal_id,gmags,rmags,imags = r[sample],v[sample],en_gal_id[sample],ln_gal_id[sample],gmags[sample],rmags[sample],imags[sample]
 		samp_size = len(sample)
 
 
 		# Eliminate galaxies w/ mag = 99.
 		cut = np.where((gmags!=99)&(rmags!=99)&(imags!=99))[0]
-		r,v,gmags,rmags,imags = r[cut],v[cut],gmags[cut],rmags[cut],imags[cut]
+		r,v,en_gal_id,ln_gal_id,gmags,rmags,imags = r[cut],v[cut],en_gal_id[cut],ln_gal_id[cut],gmags[cut],rmags[cut],imags[cut]
 		samp_size = len(cut)
 	
-		return r,v,gmags,rmags,imags,samp_size
+		return r,v,en_gal_id,ln_gal_id,gmags,rmags,imags,samp_size
 
 
 	def Bin_Calc(self,HaloData,varib):

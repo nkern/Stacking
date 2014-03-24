@@ -18,7 +18,7 @@ line_num=(2 5 10 15 25 50 100)			# Line of Sight Number
 gal_num=(5 10 15 25 50 100 150)			# Ngal number
 halo_num=2100					# Number of Halos in Sample
 method_num=0					# Ensemble Build Method
-table_num=8					# Version of entire run table
+table_num=2					# Version of entire run table
 data_loc="binstack_run_table$table_num"		# Highest Directory for Data
 
 ## Go To Stacking Directory

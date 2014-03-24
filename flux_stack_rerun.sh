@@ -13,7 +13,7 @@ clus_num=(75 30 15 10 6 3 1)			# Number of Ens Clusters done per instance
 job_num=(14 14 14 14 14 14 21)			# Number of Jobs Submitted
 halo_num=2100					# Number of Halos in Sample
 method_num=0					# Ensemble Build Method
-table_num=7					# Version of entire run table
+table_num=2					# Version of entire run table
 data_loc="binstack_run_table"$table_num		# Highest Directory for Data
 write_loc="bs_m0_run"				# Stem of write_loc directory
 

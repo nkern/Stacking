@@ -12,7 +12,7 @@
 ## IMPORT MODULES ##
 print '...importing modules'
 import numpy as np
-import pyfits
+import astropy.io.fits as fits
 from numpy.linalg import norm
 import matplotlib.pyplot as mp
 import astStats
@@ -40,7 +40,7 @@ run_los		= False				# Run caustic technique on each line of sight?
 c 		= 2.99792e5			# speed of light in km/s
 h		= 1.0				# Hubble Constant, unitless
 H0		= h*100.0			# Hubble Constant, km s-1 Mpc-1
-q		= 10.0				# Scale of Gaussian Kernel Density Estimator
+q		= 50.0				# Scale of Gaussian Kernel Density Estimator
 beta		= 0.2				# Velocity Anisotropy Beta parameter, if constant profile
 fbeta		= 0.65				# fbeta value, see 'Diaferio 1999'
 r_limit 	= 1.5				# Radius Cut Scaled by R200
@@ -141,7 +141,7 @@ for j in range(clus_num):	# iterate over # of ensembles to build and solve for
 		stack_data = BS.bin_stack_clusters(HaloID,HaloData,BinData,Halo_P,Halo_V,Gal_P,Gal_V,G_Mags,R_Mags,I_Mags,k,j)
 
 	# Unpack data
-	ens_r,ens_v,ens_gmags,ens_rmags,ens_imags,ens_hvd,ens_caumass,ens_caumass_est,ens_causurf,ens_nfwsurf,los_r,los_v,los_gmags,los_rmags,los_imags,los_hvd,los_caumass,los_caumass_est,los_causurf,los_nfwsurf,x_range,sample_size,pro_pos = stack_data
+	ens_r,ens_v,ens_gal_id,ens_gmags,ens_rmags,ens_imags,ens_hvd,ens_caumass,ens_caumass_est,ens_causurf,ens_nfwsurf,los_r,los_v,los_gal_id,los_gmags,los_rmags,los_imags,los_hvd,los_caumass,los_caumass_est,los_causurf,los_nfwsurf,x_range,sample_size,pro_pos = stack_data
 
 	if self_stack == True:
 		# Get 3D data
@@ -150,7 +150,7 @@ for j in range(clus_num):	# iterate over # of ensembles to build and solve for
 		gpx3d,gpy3d,gpz3d,gvx3d,gvy3d,gvz3d = [],[],[],[],[],[]
 
 	# Combine into stack_data
-	stack_data = [ens_r,ens_v,ens_gmags,ens_rmags,ens_imags,ens_hvd,ens_caumass,ens_caumass_est,ens_causurf,ens_nfwsurf,los_r,los_v,los_gmags,los_rmags,los_imags,los_hvd,los_caumass,los_caumass_est,los_causurf,los_nfwsurf,x_range,sample_size,pro_pos,gpx3d,gpy3d,gpz3d,gvx3d,gvy3d,gvz3d]
+	stack_data = [ens_r,ens_v,ens_gal_id,ens_gmags,ens_rmags,ens_imags,ens_hvd,ens_caumass,ens_caumass_est,ens_causurf,ens_nfwsurf,los_r,los_v,los_gal_id,los_gmags,los_rmags,los_imags,los_hvd,los_caumass,los_caumass_est,los_causurf,los_nfwsurf,x_range,sample_size,pro_pos,gpx3d,gpy3d,gpz3d,gvx3d,gvy3d,gvz3d]
 
 	# Append to STACK_DATA
 	STACK_DATA.append(stack_data)
