@@ -1,0 +1,12 @@
+...Loading Data from 49 runs
+
+Working on Run #1
+-------------------------
+Traceback (most recent call last):
+  File "flux_stack_recovery.py", line 391, in <module>
+    W.load_all()
+  File "flux_stack_recovery.py", line 344, in load_all
+    self.append_data(write_loc,i)
+  File "flux_stack_recovery.py", line 301, in append_data
+    mydict = self.recover(write_loc=write_loc,halo_range=np.arange(2124),go_global=False)
+TypeError: recover() got an unexpected keyword argument 'halo_range'

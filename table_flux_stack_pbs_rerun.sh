@@ -6,7 +6,7 @@
 #PBS -N BIN-STACK
 #PBS -l nodes=1:ppn=1,pmem=4000mb,walltime=2:00:00
 #PBS -V
-#PBS -o /nfs/christoq_ls/nkern/Stacking/binstack_run_table@@table_num@@/@@write_loc@@/
+#PBS -o /nfs/christoq_ls/nkern/Stacking/mass_mix/mm_0.50_run_table@@table_num@@/@@write_loc@@/
 #PBS -j oe
 #
 

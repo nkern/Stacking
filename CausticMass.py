@@ -376,16 +376,17 @@ class Caustic:
         #print 'GALAXIES CUT =',str(origsize-datafinal[:,0].size)
         return datafinal
 
-    
+
+    """    
     def gaussian_kernel(self,xvalues,yvalues,r200,normalization=100,scale=10,xres=200,yres=220,xmax=6.0,ymax=5000.0,adj=20):
-        """
+        '''
         Uses a 2D gaussian kernel to estimate the density of the phase space.
         As of now, the maximum radius extends to 6Mpc and the maximum velocity allowed is 5000km/s
         The "q" parameter is termed "scale" here which we have set to 10 as default, but can go as high as 50.
         "normalization" is simply H0
         "x/yres" can be any value, but are recommended to be above 150
         "adj" is a custom value and changes the size of uniform filters when used (not normally needed)
-        """
+        '''
         self.x_scale = xvalues/xmax*xres
         self.y_scale = ((yvalues+ymax)/(normalization*scale))/((ymax*2.0)/(normalization*scale))*yres
 
@@ -410,6 +411,86 @@ class Caustic:
         self.img = ndi.gaussian_filter(img, (self.ksize_y,self.ksize_x),mode='reflect')
         self.img_grad = ndi.gaussian_gradient_magnitude(img, (self.ksize_y,self.ksize_x))
         self.img_inf = ndi.gaussian_gradient_magnitude(ndi.gaussian_gradient_magnitude(img, (self.ksize_y,self.ksize_x)), (self.ksize_y,self.ksize_x))
+    """
+
+
+    def gaussian_kernel(self,xvalues,yvalues,r200,normalization=100,scale=50,xres=200,yres=220,xmax=6.0,ymax=5000.0,adj=20):
+        """
+        Uses a 2D gaussian kernel to estimate the density of the phase space.
+        As of now, the maximum radius extends to 6Mpc and the maximum velocity allowed is 5000km/s
+        The "q" parameter is termed "scale" here which we have set to 10 as default, but can go as high as 50.
+        "normalization" is simply H0
+        "x/yres" can be any value, but are recommended to be above 150
+        "adj" is a custom value and changes the size of uniform filters when used (not normally needed)
+
+        Parameters
+        ----------
+        xvalues : x-coordinates of points in phase space
+
+        yvalues : y-coordinates of points in phase space
+
+        r200 : Required estimate of r200 to calculate a rough dispersion
+
+        normalization = 100 : This is equivalent to H0. Default is H0=100
+
+        scale = 10 : "q" parameter in Diaferio 99. Literature says this can be between 10-50
+
+        xres = 200 : x-grid resolution
+
+        yres = 220 : y-grid resolution
+
+        xmax = 6.0 : Maximum x-grid value. If data points exceed this amount either increase
+        this value or cut sample to be within this value.
+
+        ymax = 5000 : Maximum/minimum y-grid value. If data points exceed this amount either increase
+        this value or cut sample to be within this value.
+
+        Returns
+        -------
+        self.x_range : array of x-grid values
+        self.y_range : array of y-grid values
+        self.img : smoothed density image
+        self.img_grad : first derivative of img
+        self.img_inf : second derivative of img
+        """
+
+        if np.max(xvalues) >= xmax:
+            raise Exception('Bounding Error: Please either increase your xmax value or trim your sample to be x < '+str(xmax))
+        if np.max(np.abs(yvalues)) >= ymax:
+            raise Exception('Bounding Error: Please either increase your ymax value or trim your sample to be y < '+str(ymax))
+
+        self.x_range = np.arange(0,xmax,0.03)
+        xres = self.x_range.size
+        self.y_range = np.arange(-ymax,ymax,2.0*ymax/(2*xres))
+        yres = self.y_range.size
+        grid_ratio = (((2.0*ymax)/yres)/normalization)/(xmax/xres)
+
+        self.x_scale = (xvalues/xmax)*xres
+        self.y_scale = ((yvalues+ymax)/(ymax*2.0))*yres
+
+        self.imgr = np.zeros((xres,yres))
+        #self.x_range = np.linspace(0,xmax,xres+1)
+        #self.y_range = np.linspace(-ymax,ymax,yres+1)
+
+        for j in range(xvalues.size):
+            self.imgr[self.x_scale[j],self.y_scale[j]] += 1
+        
+        #Estimate kernel sizes
+        #Uniform
+        #self.ksize = 3.12/(xvalues.size)**(1/6.0)*((np.var(self.x_scale[xvalues<r200])+np.var(self.y_scale[xvalues<r200]))/2.0)**0.5/adj
+        #if self.ksize < 3.5:
+        # self.ksize = 3.5
+        #Gaussian
+        self.ksize_x = (4.0/(3.0*xvalues.size))**(1/5.0)*np.std(self.x_scale[xvalues<r200])
+        self.ksize_y = self.ksize_x*scale/grid_ratio
+        #self.ksize_y = (4.0/(3.0*yvalues.size))**(1/5.0)*np.std(self.y_scale[xvalues<r200])
+        
+        #smooth with estimated kernel sizes
+        #self.img = ndi.uniform_filter(self.imgr, (self.ksize,self.ksize))#,mode='reflect')
+        self.img = ndi.gaussian_filter(self.imgr, (self.ksize_x,self.ksize_y),mode='reflect')
+        self.img_grad = ndi.gaussian_gradient_magnitude(self.imgr, (self.ksize_x,self.ksize_y))
+        self.img_inf = ndi.gaussian_gradient_magnitude(ndi.gaussian_gradient_magnitude(self.imgr, (self.ksize_x,self.ksize_y)), (self.ksize_x,self.ksize_y))
+
 
 
 
@@ -509,6 +590,7 @@ class CausticSurface:
         self.NFWfit(ri[fitting_radii],self.Ar_finalD[fitting_radii]*np.sqrt(self.gb[fitting_radii]),self.halo_scale_radius,ri,self.gb)
         #self.NFWfit(ri[fitting_radii],self.Ar_finalD[fitting_radii],self.halo_scale_radius,ri,self.gb)
 
+        plotphase = False
         if plotphase == True:
             s =figure()
             ax = s.add_subplot(111)
@@ -596,10 +678,11 @@ class CausticSurface:
         x = np.trapz(Zi.compressed(),vi)
         return x
 
+    """
     def findAofr(self,level,Zi,vgridvals):
-        """
+        '''
         Finds the velocity where kappa is
-        """
+        '''
         dens0 = Zi[np.where(vgridvals>=0)][0]
         if dens0 >= level:
             maxdens = 0.0 #v value we are centering on
@@ -628,6 +711,42 @@ class CausticSurface:
             if np.abs(highamp) < np.abs(lowamp):
                 return highamp
         else: return 0 #no maximum density exists
+    """
+
+    def findAofr(self,level,Zi,vgridvals):
+        """
+        Finds the velocity where kappa is
+        """
+        dens0 = Zi[np.where(vgridvals>=0)][0]
+        if dens0:#dens0 >= level:
+            maxdens = 0.0 #v value we are centering on
+            highvalues = Zi[np.where(vgridvals >= maxdens)] #density values above the center v value maxdens
+            lowvalues = Zi[np.where(vgridvals < maxdens)] #density values below the center v value maxdens
+            highv = vgridvals[np.where(vgridvals >= maxdens)] #v values above the center v value maxdens
+            lowv = vgridvals[np.where(vgridvals < maxdens)] #v values below the center v value maxdens
+            highslot = self.identifyslot(highvalues,level) #identify the velocity
+            flip_lowslot = self.identifyslot(lowvalues[::-1],level)
+            lowslot = lowvalues.size - flip_lowslot
+            if len(lowv) == 0 or len(highv) == 0: #probably all zeros
+                highamp = lowamp = 0
+                return highamp
+            if highslot == highv.size:
+                highamp = highv[-1]
+            if lowslot ==0:
+                lowamp = lowv[0]
+            if highslot == 0 or lowslot == lowv.size:
+                highamp = lowamp = 0
+            if highslot != 0 and highslot != highv.size:
+                highamp = highv[highslot]-(highv[highslot]-highv[highslot-1])*(1-(highvalues[highslot-1]-level)/(highvalues[highslot-1]-highvalues[highslot]))
+            if lowslot != 0 and lowslot != lowv.size:
+                lowamp = lowv[lowslot-1]-(lowv[lowslot-1]-lowv[lowslot])*(1-(lowvalues[lowslot]-level)/(lowvalues[lowslot]-lowvalues[lowslot-1]))
+            if np.abs(highamp) >= np.abs(lowamp):
+                return lowamp
+            if np.abs(highamp) < np.abs(lowamp):
+                return highamp
+        else:
+            return 0 #no maximum density exists
+
 
     def restrict_gradient2(self,pastA,newA,pastr,newr):
         """
@@ -644,6 +763,7 @@ class CausticSurface:
                 return np.exp(np.log(pastA) - 2*dr)
             else: return newA
 
+    """
     def identifyslot(self,dvals,level):
         '''This function takes the density values for a given r grid value either above or below
         the v grid value that corresponds to the maximum density at the r slice and returns the indici
@@ -660,6 +780,32 @@ class CausticSurface:
                     slot = i
                     break
         return slot
+    """
+
+    def identifyslot(self,dvals,level):
+        '''This function takes the density values for a given r grid value either above or below
+the v grid value that corresponds to the maximum density at the r slice and returns the indici
+where the level finally falls below the given level. Density values should be in order
+starting with the corresponding value to the v value closest to the maximum and working toward
+the edges (high to low density in general).'''
+        slot = dvals.size - 1
+        if len(dvals[dvals>level])== 0:
+            slot = 0
+            return slot
+        for i in range(dvals.size):
+            if dvals[i] == 0.0:
+                continue
+            if i < np.where(dvals>level)[0][0]:
+                continue
+            if level >= dvals[i]:
+                if i != 0:
+                    slot = i-1
+                    break
+                else:
+                    slot = i
+                    break
+        return slot
+
 
     def NFWfit(self,ri,Ar,halo_srad,ri_full,g_b):
         min_func = lambda x,d0: np.sqrt(2*4*np.pi*4.5e-48*d0*(halo_srad)**2*np.log(1+x/halo_srad)/(x/halo_srad))*3.08e19
@@ -741,7 +887,7 @@ class MassCalc:
             #self.r200_est = (ri[:self.f_beta.size])[np.where(self.avg_density >= 200*self.crit)[0]+1][-1]
             finterp = interp1d(self.avg_density[::-1],ri[:self.f_beta.size][::-1])
             self.r200_est = finterp(200*self.crit)
-        except IndexError:
+        except: # IndexError:
             self.r200_est = 0.0
 #        self.M200_est = self.massprofile[np.where(ri[:self.f_beta.size] <= self.r200_est)[0][-1]]
         finterp = interp1d(ri[:self.f_beta.size],self.massprofile)
