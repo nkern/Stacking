@@ -57,6 +57,9 @@ class Recover(universal):
 		self.ss = ss
 		self.mm = mm
 
+		# Create Final Dictionary w/ Data to Return
+		final_data = {}
+
 		# Create them as lists
 		ENS_CAUMASS,ENS_CAUMASS_EST,ENS_CAUSURF,ENS_NFWSURF,LOS_CAUMASS,LOS_CAUMASS_EST,LOS_CAUSURF,LOS_NFWSURF = [],[],[],[],[],[],[],[]
 		ENS_R,ENS_V,ENS_GMAGS,ENS_RMAGS,ENS_IMAGS,LOS_R,LOS_V,LOS_GMAGS,LOS_RMAGS,LOS_IMAGS,ENS_HVD,LOS_HVD = [],[],[],[],[],[],[],[],[],[],[],[]
@@ -74,7 +77,11 @@ class Recover(universal):
 		varib				= input.load()
 		run_dict			= input.load()
 
-		
+		# Add varib and run_dict to final_data
+		final_data.update(varib)
+		final_data.update(run_dict)
+
+		# Add varib to Classes	
 		self.__dict__.update(varib)
 		self.U = universal(varib)
 		if self.ss:	self.halo_range = range(2124)
@@ -220,22 +227,23 @@ class Recover(universal):
 
 			mydict = dict( zip(names,data) )
 
+			# Add to final_data
+			final_data.update(mydict)
+
 			# Append Bin Arrays if bin stack
 			if self.ss == False:
-				mydict.update({'BIN_M200':BIN_M200,'BIN_R200':BIN_R200,'BIN_HVD':BIN_HVD})	
+				final_data.update({'BIN_M200':BIN_M200,'BIN_R200':BIN_R200,'BIN_HVD':BIN_HVD})	
 
 			if go_global == True:
-				globals().update(mydict)
-				globals().update(varib)
-				globals().update(run_dict)
+				globals().update(final_data)
 				return
 			elif go_global == False:
-				mydict.update(run_dict)
-				return  mydict	
+				return  final_data	
 
 		################################
 		### Statistical Calculations ###
 		################################
+		
 		if self.ss:
 			ENS_MFRAC,ens_mbias,ens_mscat,ENS_VFRAC,ens_vbias,ens_vscat = self.stat_calc(ENS_CAUMASS,M_crit200,ENS_HVD,HVD)
 			if ens_only == True:
@@ -243,7 +251,10 @@ class Recover(universal):
 			else:
 				LOS_MFRAC,los_mbias,los_mscat,LOS_VFRAC,los_vbias,los_vscat = self.stat_calc(LOS_CAUMASS.ravel(),M_crit200[0:self.halo_num],LOS_HVD.ravel(),HVD[0:self.halo_num],ens=False)
 		else:
-			ENS_MFRAC,ens_mbias,ens_mscat,ENS_VFRAC,ens_vbias,ens_vscat = self.stat_calc(ENS_CAUMASS,BIN_M200,ENS_HVD,BIN_HVD)
+			if mm == True:
+				ENS_MFRAC,ens_mbias,ens_mscat,ENS_VFRAC,ens_vbias,ens_vscat = self.stat_calc(ENS_CAUMASS,BIN_M200,ENS_HVD,BIN_HVD,data_set='cut_low_mass')
+			else:
+				ENS_MFRAC,ens_mbias,ens_mscat,ENS_VFRAC,ens_vbias,ens_vscat = self.stat_calc(ENS_CAUMASS,BIN_M200,ENS_HVD,BIN_HVD)
 			if ens_only == True:
 				LOS_MFRAC,los_mbias,los_mscat,LOS_VFRAC,los_vbias,los_vscat = None,None,None,None,None,None
 			else:
@@ -272,15 +283,23 @@ class Recover(universal):
 
 
 
-	def stat_calc(self,MASS_EST,MASS_TRUE,HVD_EST,HVD_TRUE,data_set='full',ens=True):
+	def stat_calc(self,MASS_EST,MASS_TRUE,HVD_EST,HVD_TRUE,data_set=None,ens=True):
 		''' Does bias and scatter calculations '''
+		# Cut data set if necessary
+		if data_set == 'cut_low_mass':
+			'''Cutting all 'true' mass estimates below 1e14 off'''
+			cut = np.where(MASS_TRUE>1e14)[0]
+			MASS_EST = MASS_EST[cut]
+			MASS_TRUE = MASS_TRUE[cut]
+			HVD_EST = HVD_EST[cut]
+			HVD_TRUE = HVD_TRUE[cut]	
+
 		# Define a Masked array for sometimes zero terms
 		epsilon = 10.0
 		use_est = False				# Use MassCalc estimated r200 mass values if true 
 		maMASS_EST	= ma.masked_array(MASS_EST,mask=MASS_EST<epsilon)		# Mask essentially zero values
 		maHVD_EST	= ma.masked_array(HVD_EST,mask=HVD_EST<epsilon)
 
-		# 
 
 		# Mass / HVD Fractions
 		if ens == True:
@@ -290,7 +309,7 @@ class Recover(universal):
 		else:
 			# LOS Mass Fraction Arrays: 0th axis is halo number, 1st axis is line of sight number
 			MFRAC,VFRAC = [],[]
-			for a in range(self.halo_num):
+			for a in range(len(MASS_EST)):
 				MFRAC.append( ma.log( maMASS_EST[a]/MASS_TRUE[a] ) )
 				VFRAC.append( ma.log( maHVD_EST[a]/HVD_TRUE[a] ) )
 			MFRAC,VFRAC = np.array(MFRAC),np.array(VFRAC)
@@ -370,7 +389,7 @@ class Work(Recover):
 		# Feed Local Variables
 		self.ens_only = ens_only	
 		if kwargs == None:
-			kwargs = {'write_loc':'mm_m0_run1','raw_data':False,'ss':False,'go_global':False,'ens_only':True,'data_loc':'mass_mix/mm_0.05_run_table1'}
+			kwargs = {'write_loc':'mm_m0_run1','raw_data':False,'ss':False,'mm':True,'go_global':False,'ens_only':True,'data_loc':'mass_mix/mm_0.05_run_table1'}
 	
 		# Configure Variables
 		if iter_array == None:
@@ -393,7 +412,7 @@ class Work(Recover):
 				print 'Working on Run #'+str(i)
 				print '-'*25
 				## Define Recover Keyword Arguments!  ##
-				kwargs['write_loc'] = 'mm_m0_run'+str(i)
+				kwargs['write_loc'] = kwargs['write_loc'][0:-1]+str(i)
 				kwargs['ens_only'] = True
 				if i%7==0:
 					kwargs['ens_only'] = False	
@@ -459,12 +478,12 @@ class Work(Recover):
 R = Recover()
 W = Work(Recover)
 
-work = False
+work = True
 if work == True:
 	
 	table_num = str(sys.argv[1])
 
-	kwargs = {'write_loc':'mm_m0_run1','raw_data':False,'ss':False,'mm':True,'go_global':False,'ens_only':True,'data_loc':'mass_mix/mm_0.50_run_table1'}
+	kwargs = {'write_loc':'mm_m0_run1','raw_data':False,'ss':False,'mm':True,'go_global':False,'ens_only':True,'data_loc':'mass_mix/mm_0.25_run_table1'}
 
 	data = W.load_all(kwargs=kwargs)
 
@@ -474,7 +493,7 @@ if work == True:
 
 	dictionary = dict(zip(names,values))
 
-	file = open('mass_mix/mm_0.50_run_table'+table_num+'/mm_0.50_run_table'+table_num+'_analysis.pkl','wb')
+	file = open('mass_mix/mm_0.25_run_table'+table_num+'/mm_0.25_run_table'+table_num+'_analysis.pkl','wb')
 
 	output = pkl.Pickler(file)
 

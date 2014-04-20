@@ -22,9 +22,7 @@ class main():
 		It then does this iteratively for multiple realizations, and averages the results.
 		'''
 	
-		data_stem = 'mass_mix/mm_0.05_run_table'
-		data_end = '_analysis.pkl'
-		table_iter = np.array([1])
+		table_iter = np.array([1,3,4,5])
 		iter_len = np.float(len(table_iter))
 
 		ENS_MBIAS = []
@@ -32,7 +30,7 @@ class main():
 		ENS_VBIAS = []
 		ENS_VSCAT = []
 		for i in table_iter:
-			data = load(filename=data_stem+str(i)+'/'+data_stem+str(i)+data_end)
+			data = self.load(filename='binstack/bs_run_table'+str(i)+'/bs_rt'+str(i)+'_analysis.pkl')
 			ENS_MBIAS.append(data['ENS_MBIAS'])
 			ENS_MSCAT.append(data['ENS_MSCAT'])
 			ENS_VBIAS.append(data['ENS_VBIAS'])
@@ -75,6 +73,7 @@ IND_MBIAS_ERR 		= np.array([.09,.08,.05,.05,.04,.03,.03,.03])
 ##
 
 # Load Data
+raise NameError
 globals().update(M.load(filename='mass_mix/mm_0.05_run_table1/mm_0.05_run_table1_analysis.pkl'))
 
 raise NameError

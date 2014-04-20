@@ -36,7 +36,7 @@ light_cone	= False				# Input RA|DEC projection data if True, if False inputting
 clean_ens	= False				# Do an extra shiftgapper on ensemble before the lines of sight get stacked.
 small_set	= False				# 100 Halo Set or 2000 Halo Set
 run_los		= False				# Run caustic technique on each line of sight?
-mass_mix	= False				# Incorporate Mass Mixing Models?
+mass_mix	= True				# Incorporate Mass Mixing Models?
 
 ## CONSTANTS ##
 c 		= 2.99792e5			# speed of light in km/s
@@ -50,7 +50,7 @@ v_limit		= 3500.0			# Velocity Cut in km/s
 data_set	= 'Guo30_2'			# Data set to draw semi analytic data from
 halo_num	= 2100				# Total number of halos loaded
 run_time	= time.asctime()		# Time when program was started
-mass_scat	= 0				# If mass_mix = True, fractional scatter induced into table mass
+mass_scat	= '0.50'				# If mass_mix = True, fractional scatter induced into table mass
 
 ## RUN DEPENDENT CONSTANTS ##
 run_num		= int(sys.argv[1])		# run_num th iteration of the whole job array in PBS script
@@ -76,7 +76,7 @@ else:
 	write_loc = 'bs_m'+str(method_num)+'_run'+str(cell_num)			# Bin Stack data-write location
 	stack_range = np.arange(run_num*clus_num*line_num,run_num*clus_num*line_num+clus_num*line_num)
 	if mass_mix == True:							# Change write_loc if mass mixing
-		data_loc = 'mass_mix/mm_'+str(mass_scat)+'_run_table'+str(table_num)
+		data_loc = 'mass_mix/mm_'+mass_scat+'_run_table'+str(table_num)
 		write_loc = 'mm_m'+str(method_num)+'_run'+str(cell_num)
 
 
@@ -99,18 +99,19 @@ U.print_varibs(varib)
 ## Load Halo Data
 U.print_separation('# ...Loading Halos',type=2)
 HaloID,HaloData = U.load_halos()
+
 # Sort Halos by A Priori Known Descending Mass (Mass Critical 200)
 HaloID,HaloData = U.sort_halos(HaloID,HaloData)
 HaloID_init,HaloData_init = np.copy(HaloID),np.copy(HaloData)
+
 # Mass Mix if applicable
 if mass_mix == True:
-	HaloID,HaloData = U.mass_mixing(HaloID,HaloData,mass_scat)
-	mass_mix_match,HaloID_match,HaloData_match = U.id_match(HaloID_init,HaloID,np.array(HaloData))
-else:
-	mass_mix_match,HaloID_match,HaloData_match = [],[],[]
+	HaloID,HaloData = U.mass_mixing(HaloID,HaloData,float(mass_scat))
+	Halo_match,HaloID_match,HaloData_match = U.id_match(HaloID_init,HaloID,np.array(HaloData))
 
 # Unpack HaloData array into local namespace
 M_crit200,R_crit200,Z,SRAD,ESRAD,HVD,HPX,HPY,HPZ,HVX,HVY,HVZ = HaloData
+
 
 ## Load Galaxy Data
 U.print_separation('# ...Loading Galaxies',type=2)
@@ -173,8 +174,12 @@ for j in range(clus_num):	# iterate over # of ensembles to build and solve for
 U.print_separation('#...Finished Ensemble Loop',type=2)
 
 # Create run_dict
-keys = ['HaloID','HaloData','HaloID_init','HaloData_init','mass_mix_match','HaloID_match','HaloData_match']
-vals = [HaloID,HaloData,HaloID_init,HaloData_init,mass_mix_match,HaloID_match,HaloData_match]
+keys = ['HaloID','HaloData']
+vals = [HaloID,HaloData]
+if mass_mix == True:
+	keys = ['HaloID','HaloData','HaloID_init','HaloData_init','Halo_match','HaloID_match','HaloData_match']
+	vals = [HaloID,HaloData,HaloID_init,HaloData_init,Halo_match,HaloID_match,HaloData_match]
+
 run_dict = dict(zip(keys,vals))
 
 ### Save Data into Fits Files ###

@@ -6,7 +6,7 @@
 #PBS -N table_analysis
 #PBS -l nodes=1:ppn=1,pmem=30000mb,walltime=1:00:00
 #PBS -V
-#PBS -o /nfs/christoq_ls/nkern/Stacking/
+#PBS -o /nfs/christoq_ls/nkern/Stacking/selfstack/
 #PBS -j oe
 #
 
